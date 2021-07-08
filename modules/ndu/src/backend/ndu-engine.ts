@@ -202,6 +202,8 @@ export class UnderstandingEngine {
     // TODO: NDU compute & rank triggers
 
     const triggers = _.toPairs(event.ndu.triggers).map(([id, result]) => {
+      // Confidence will be never than One ??
+      // 1 * 1
       const confidence = Object.values(result.result).reduce((prev, next) => prev * next, 1)
       return {
         id,
@@ -283,6 +285,7 @@ export class UnderstandingEngine {
       wf_trigger_outside_topic: actionFeatures.conf_wf_trigger_outside_topic.id
     }
 
+    // Prediction is always the same value
     event.ndu.predictions = ActionTypes.reduce((obj, action) => {
       obj[action] = {
         confidence: prediction[action],
