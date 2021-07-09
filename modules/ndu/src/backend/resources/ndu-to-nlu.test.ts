@@ -195,9 +195,10 @@ describe('Migrate NDU to NLU workflow', () => {
   })
 
   it('Return flow and Flow UI without trigger ID always', async () => {
-    removeTriggersToListenNodes(flow)
+    let flowToTest = [flow]
+    let expectedFlow = []
 
-    const expectFlow: TriggerNode = {
+    const expectFlow1: TriggerNode = {
       version: '0.0.1',
       catchAll: {},
       startNode: 'entry',
@@ -264,7 +265,84 @@ describe('Migrate NDU to NLU workflow', () => {
       ]
     }
 
-    // I want the trigger to be fully remove.
-    expect(flow).toEqual(expectFlow)
+    const flow2: ListenNode = {
+      nodes: [
+        {
+          id: '3c6af6e18a',
+          name: 'node-faf0',
+          next: [
+            {
+              condition: 'true',
+              node: 'node-1d57'
+            }
+          ],
+          onEnter: [],
+          onReceive: [
+            'basic-skills/choice_parse_answer {"contentId":"builtin_single-choice-dZlz5K","invalidContentId":"","keywords":{"yes":["yes","Yes"],"no":["no","No"]},"config":{"nbMaxRetries":3}}'
+          ],
+          type: 'trigger',
+          conditions: [
+            {
+              id: 'user_intent_is',
+              params: {
+                intentName: 'service-now.tickets'
+              }
+            }
+          ],
+          triggers: [
+            {
+              conditions: [{ id: 'always' }]
+            },
+            {
+              conditions: [{ id: 'user_id' }]
+            }
+          ],
+          activeWorkflow: false
+        }
+      ]
+    }
+    const expectedFlow2: ListenNode = {
+      nodes: [
+        {
+          id: '3c6af6e18a',
+          name: 'node-faf0',
+          next: [
+            {
+              condition: 'true',
+              node: 'node-1d57'
+            }
+          ],
+          onEnter: [],
+          onReceive: [
+            'basic-skills/choice_parse_answer {"contentId":"builtin_single-choice-dZlz5K","invalidContentId":"","keywords":{"yes":["yes","Yes"],"no":["no","No"]},"config":{"nbMaxRetries":3}}'
+          ],
+          type: 'trigger',
+          conditions: [
+            {
+              id: 'user_intent_is',
+              params: {
+                intentName: 'service-now.tickets'
+              }
+            }
+          ],
+          triggers: [
+            {
+              conditions: [{ id: 'user_id' }]
+            }
+          ],
+          activeWorkflow: false
+        }
+      ]
+    }
+
+    expectedFlow.push(expectFlow1)
+
+    // Actual test
+    flowToTest.forEach(flow => {
+      removeTriggersToListenNodes(flow)
+      expectedFlow.forEach(expected => {
+        expect(flow).toEqual(expected)
+      })
+    })
   })
 })
