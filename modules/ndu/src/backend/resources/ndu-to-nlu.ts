@@ -27,17 +27,15 @@ export const removeSuccessFailureNodes = (flow: sdk.Flow, flowUi: FlowNodeView) 
   return { flow, flowUi }
 }
 
-const removeTriggersToListenNodes = (flow: sdk.Flow, flowPath: string) => {
+export const removeTriggersToListenNodes = (flow: sdk.Flow) => {
   for (const node of flow.nodes) {
     if (node.onReceive != null) {
       // A listen node is Skill node. I don't know why but all the skill node
       // was containing the conditions id: 'always'. It's a big assumption
       const listenNode = (node as unknown) as sdk.ListenNode
-      if (listenNode.triggers?.length > 0 && listenNode.triggers.includes(sdk.ListenNode)) {
-        listenNode.triggers.filter(x => x.conditions.)
-        debug('Add triggers property to node %o', { flow: flowPath, node: node.name })
-        listenNode.triggers = [{ conditions: [{ id: 'always' }] }]
-      }
+      // I'm checking if one of the element is a condition that is always true
+      listenNode.triggers?.forEach(x => (x.conditions = x.conditions.filter(y => y.id !== 'always')))
+      const triggerNode = listenNode as sdk.FlowNode
     }
   }
 }
