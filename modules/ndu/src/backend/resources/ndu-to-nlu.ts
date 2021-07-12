@@ -27,15 +27,23 @@ export const removeSuccessFailureNodes = (flow: sdk.Flow, flowUi: FlowNodeView) 
   return { flow, flowUi }
 }
 
-export const removeTriggersToListenNodes = (flow: sdk.Flow) => {
+export const removeListenNodeAlways = (flow: sdk.Flow) => {
   for (const node of flow.nodes) {
     if (node.onReceive != null) {
-      // A listen node is Skill node. I don't know why but all the skill node
+      // A listen node is a Skill node. I don't know why but all the skill node
       // was containing the conditions id: 'always'. It's a big assumption
       const listenNode = (node as unknown) as sdk.ListenNode
       // I'm checking if one of the element is a condition that is always true
       listenNode.triggers?.forEach(x => (x.conditions = x.conditions.filter(y => y.id !== 'always')))
-      const triggerNode = listenNode as sdk.FlowNode
+    }
+  }
+}
+
+export const transformExecuteNodeToStandardNode = (flow: sdk.Flow) => {
+  for (const node of flow.nodes) {
+    if (node.type === 'execute') {
+      const standardNode = (node as unknown) as sdk.FlowNode
+      standardNode.type = 'standard'
     }
   }
 }
@@ -52,7 +60,9 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService) => {
     // The triggers is important you will transfer trigger to action or other properties type
     removeSuccessFailureNodes(flow, flowUi)
     // After this call the node can still have the ListenNode signature. At the end I need to remove all the value ListenNode from this migration
-    removeTriggersToListenNodes(flow)
+    removeListenNodeAlways(flow)
+
+    transformExecuteNodeToStandardNode(flow)
 
     // I use upsert to update the current file
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))

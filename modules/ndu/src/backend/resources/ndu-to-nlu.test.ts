@@ -1,5 +1,5 @@
-import { ListenNode, TriggerNode } from 'botpress/sdk'
-import { removeSuccessFailureNodes, removeTriggersToListenNodes } from './ndu-to-nlu'
+import { ListenNode, TriggerNode, FlowNode } from 'botpress/sdk'
+import { removeSuccessFailureNodes, removeListenNodeAlways, transformExecuteNodeToStandardNode } from './ndu-to-nlu'
 interface FlowNodeView {
   nodes: {
     id: string
@@ -339,9 +339,91 @@ describe('Migrate NDU to NLU workflow', () => {
 
     // Actual test
     flowToTest.forEach(flow => {
-      removeTriggersToListenNodes(flow)
+      removeListenNodeAlways(flow)
       expectedFlow.forEach(expected => {
         expect(flow).toEqual(expected)
+      })
+    })
+  })
+
+  it('Transform Node execute to standard node', async () => {
+    let flowToTest: FlowNode[] = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: [
+          {
+            id: '801692b22b',
+            name: 'node-1fb4',
+            next: [
+              {
+                condition: 'true',
+                node: 'node-05e9'
+              }
+            ],
+            onEnter: ['ads_unlock_unsubscribe_dropdown {}'],
+            onReceive: null,
+            type: 'execute'
+          },
+          {
+            id: '1c6d7e7cbe',
+            name: 'node-0534',
+            next: [
+              {
+                condition: 'true',
+                node: 'node-7d2c-copy'
+              }
+            ],
+            onEnter: ['send_message {"message":"pleasewait"}'],
+            onReceive: null,
+            type: 'execute'
+          }
+        ]
+      }
+    ]
+    let flowToExpected: FlowNode[] = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: [
+          {
+            id: '801692b22b',
+            name: 'node-1fb4',
+            next: [
+              {
+                condition: 'true',
+                node: 'node-05e9'
+              }
+            ],
+            onEnter: ['ads_unlock_unsubscribe_dropdown {}'],
+            onReceive: null,
+            type: 'standard'
+          },
+          {
+            id: '1c6d7e7cbe',
+            name: 'node-0534',
+            next: [
+              {
+                condition: 'true',
+                node: 'node-7d2c-copy'
+              }
+            ],
+            onEnter: ['send_message {"message":"pleasewait"}'],
+            onReceive: null,
+            type: 'standard'
+          }
+        ]
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      transformExecuteNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
       })
     })
   })
