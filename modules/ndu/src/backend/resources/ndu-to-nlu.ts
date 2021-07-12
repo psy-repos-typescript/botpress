@@ -51,6 +51,8 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService) => {
 
     // The triggers is important you will transfer trigger to action or other properties type
     removeSuccessFailureNodes(flow, flowUi)
+    // After this call the node can still have the ListenNode signature. At the end I need to remove all the value ListenNode from this migration
+    removeTriggersToListenNodes(flow)
 
     // I use upsert to update the current file
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
