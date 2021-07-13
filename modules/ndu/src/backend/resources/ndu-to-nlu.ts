@@ -47,6 +47,15 @@ export const transformExecuteNodeToStandardNode = (flow: sdk.Flow) => {
     }
   }
 }
+export const transformListenNodeToStandardNode = (flow: sdk.Flow) => {
+  for (const node of flow.nodes) {
+    if (node.type === 'listen') {
+      const standardNode = (node as unknown) as sdk.FlowNode
+      standardNode.type = 'standard'
+      standardNode.onReceive = []
+    }
+  }
+}
 
 export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId: string, bp: typeof sdk.bp) => {
   for (const node of flow.nodes) {

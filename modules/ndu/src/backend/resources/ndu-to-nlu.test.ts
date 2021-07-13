@@ -16,6 +16,9 @@ interface FlowNodeView {
 
 describe('Migrate NDU to NLU workflow', () => {
   let flow: ListenNode
+  let flowToTest: FlowNode[]
+  let flowToExpected: FlowNode[]
+
   beforeEach(async () => {
     flow = {
       version: '0.0.1',
@@ -87,6 +90,24 @@ describe('Migrate NDU to NLU workflow', () => {
         }
       ]
     }
+    flowToTest = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: []
+      }
+    ]
+    flowToExpected = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: []
+      }
+    ]
   })
 
   afterEach(() => {})
@@ -356,76 +377,61 @@ describe('Migrate NDU to NLU workflow', () => {
   })
 
   it('Transform Node execute to standard node', async () => {
-    let flowToTest: FlowNode[] = [
+    flowToTest[0].nodes = [
       {
-        version: '0.0.1',
-        catchAll: {},
-        startNode: 'entry',
-        description: '',
-        nodes: [
+        id: '801692b22b',
+        name: 'node-1fb4',
+        next: [
           {
-            id: '801692b22b',
-            name: 'node-1fb4',
-            next: [
-              {
-                condition: 'true',
-                node: 'node-05e9'
-              }
-            ],
-            onEnter: ['ads_unlock_unsubscribe_dropdown {}'],
-            onReceive: null,
-            type: 'execute'
-          },
-          {
-            id: '1c6d7e7cbe',
-            name: 'node-0534',
-            next: [
-              {
-                condition: 'true',
-                node: 'node-7d2c-copy'
-              }
-            ],
-            onEnter: ['send_message {"message":"pleasewait"}'],
-            onReceive: null,
-            type: 'execute'
+            condition: 'true',
+            node: 'node-05e9'
           }
-        ]
+        ],
+        onEnter: ['ads_unlock_unsubscribe_dropdown {}'],
+        onReceive: null,
+        type: 'execute'
+      },
+      {
+        id: '1c6d7e7cbe',
+        name: 'node-0534',
+        next: [
+          {
+            condition: 'true',
+            node: 'node-7d2c-copy'
+          }
+        ],
+        onEnter: ['send_message {"message":"pleasewait"}'],
+        onReceive: null,
+        type: 'execute'
       }
     ]
-    let flowToExpected: FlowNode[] = [
+
+    flowToExpected[0].nodes = [
       {
-        version: '0.0.1',
-        catchAll: {},
-        startNode: 'entry',
-        description: '',
-        nodes: [
+        id: '801692b22b',
+        name: 'node-1fb4',
+        next: [
           {
-            id: '801692b22b',
-            name: 'node-1fb4',
-            next: [
-              {
-                condition: 'true',
-                node: 'node-05e9'
-              }
-            ],
-            onEnter: ['ads_unlock_unsubscribe_dropdown {}'],
-            onReceive: null,
-            type: 'standard'
-          },
-          {
-            id: '1c6d7e7cbe',
-            name: 'node-0534',
-            next: [
-              {
-                condition: 'true',
-                node: 'node-7d2c-copy'
-              }
-            ],
-            onEnter: ['send_message {"message":"pleasewait"}'],
-            onReceive: null,
-            type: 'standard'
+            condition: 'true',
+            node: 'node-05e9'
           }
-        ]
+        ],
+        onEnter: ['ads_unlock_unsubscribe_dropdown {}'],
+        onReceive: null,
+        type: 'standard'
+      },
+      {
+        id: '1c6d7e7cbe',
+        name: 'node-0534',
+        next: [
+          {
+            condition: 'true',
+            node: 'node-7d2c-copy'
+          }
+        ],
+        onEnter: ['send_message {"message":"pleasewait"}'],
+        onReceive: null,
+        type: 'standard'
       }
     ]
 
@@ -440,62 +446,46 @@ describe('Migrate NDU to NLU workflow', () => {
   it.skip('Created buildin_text element from say_something node', async () => {
     // Need to figured how to create an application botpress in the unit-test
     // Create the CMS service
-    let flowToTest: FlowNode[] = [
+    flowToTest[0].nodes = [
       {
-        version: '0.0.1',
-        catchAll: {},
-        startNode: 'entry',
-        description: '',
-        nodes: [
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
           {
-            id: '29980a4b1d',
-            name: 'node-b21f-copy',
-            next: [
-              {
-                condition: 'true',
-                node: 'success'
-              }
-            ],
-            onEnter: [],
-            onReceive: null,
-            type: 'say_something',
-            content: {
-              createOrUpdateContentElement: 'builtin_text',
-              formData: {
-                markdown$en: true,
-                typing$en: true,
-                text$en: '{{temp.response}}'
-              }
-            }
+            condition: 'true',
+            node: 'success'
           }
-        ]
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'say_something',
+        content: {
+          createOrUpdateContentElement: 'builtin_text',
+          formData: {
+            markdown$en: true,
+            typing$en: true,
+            text$en: '{{temp.response}}'
+          }
+        }
       }
     ]
-    let flowToExpected: FlowNode[] = [
+    flowToExpected[0].nodes = [
       {
-        version: '0.0.1',
-        catchAll: {},
-        startNode: 'entry',
-        description: '',
-        nodes: [
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
           {
-            id: '29980a4b1d',
-            name: 'node-b21f-copy',
-            next: [
-              {
-                condition: 'true',
-                node: 'success'
-              }
-            ],
-            onEnter: [],
-            onReceive: null,
-            type: 'standard',
-            content: {
-              createOrUpdateContentElement: '',
-              formData: {}
-            }
+            condition: 'true',
+            node: 'success'
           }
-        ]
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'standard',
+        content: {
+          createOrUpdateContentElement: '',
+          formData: {}
+        }
       }
     ]
 
@@ -508,50 +498,34 @@ describe('Migrate NDU to NLU workflow', () => {
   })
 
   it('Created Modified execute type to standard node', async () => {
-    let flowToTest: FlowNode[] = [
+    flowToTest[0].nodes = [
       {
-        version: '0.0.1',
-        catchAll: {},
-        startNode: 'entry',
-        description: '',
-        nodes: [
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
           {
-            id: '29980a4b1d',
-            name: 'node-b21f-copy',
-            next: [
-              {
-                condition: 'true',
-                node: 'success'
-              }
-            ],
-            onEnter: ['send_message {"message":"pleasewait"}'],
-            onReceive: null,
-            type: 'execute'
+            condition: 'true',
+            node: 'success'
           }
-        ]
+        ],
+        onEnter: ['send_message {"message":"pleasewait"}'],
+        onReceive: null,
+        type: 'execute'
       }
     ]
-    let flowToExpected: FlowNode[] = [
+    flowToExpected[0].nodes = [
       {
-        version: '0.0.1',
-        catchAll: {},
-        startNode: 'entry',
-        description: '',
-        nodes: [
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
           {
-            id: '29980a4b1d',
-            name: 'node-b21f-copy',
-            next: [
-              {
-                condition: 'true',
-                node: 'success'
-              }
-            ],
-            onEnter: ['send_message {"message":"pleasewait"}'],
-            onReceive: null,
-            type: 'standard'
+            condition: 'true',
+            node: 'success'
           }
-        ]
+        ],
+        onEnter: ['send_message {"message":"pleasewait"}'],
+        onReceive: null,
+        type: 'standard'
       }
     ]
 
