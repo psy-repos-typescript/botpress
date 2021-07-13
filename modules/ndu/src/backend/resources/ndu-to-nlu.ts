@@ -80,6 +80,7 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     // After this call the node can still have the ListenNode signature. At the end I need to remove all the value ListenNode from this migration
     removeListenNodeAlways(flow)
 
+    await transformSaySomethingToStandardNode(flow, botId, bp)
     transformExecuteNodeToStandardNode(flow)
 
     await transformSaySomethingToStandardNode(flow, botId, bp)
@@ -97,8 +98,6 @@ const migrateToNLU = async (bp: typeof sdk, botId: string) => {
 
   // Transform the documentation into a older flow
   await bp.config.mergeBotConfig(botId, { oneflow: false })
-
-  console.log(mountedBots[botId])
 }
 
 export default migrateToNLU

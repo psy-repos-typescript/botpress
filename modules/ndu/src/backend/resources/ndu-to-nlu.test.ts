@@ -506,4 +506,60 @@ describe('Migrate NDU to NLU workflow', () => {
       })
     })
   })
+
+  it('Created Modified execute type to standard node', async () => {
+    let flowToTest: FlowNode[] = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: [
+          {
+            id: '29980a4b1d',
+            name: 'node-b21f-copy',
+            next: [
+              {
+                condition: 'true',
+                node: 'success'
+              }
+            ],
+            onEnter: ['send_message {"message":"pleasewait"}'],
+            onReceive: null,
+            type: 'execute'
+          }
+        ]
+      }
+    ]
+    let flowToExpected: FlowNode[] = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: [
+          {
+            id: '29980a4b1d',
+            name: 'node-b21f-copy',
+            next: [
+              {
+                condition: 'true',
+                node: 'success'
+              }
+            ],
+            onEnter: ['send_message {"message":"pleasewait"}'],
+            onReceive: null,
+            type: 'standard'
+          }
+        ]
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      transformExecuteNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
 })
