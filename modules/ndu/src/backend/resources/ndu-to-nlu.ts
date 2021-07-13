@@ -113,8 +113,10 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
 
     await transformSaySomethingToStandardNode(flow, botId, bp)
     transformExecuteNodeToStandardNode(flow)
-
-    await transformSaySomethingToStandardNode(flow, botId, bp)
+    transformListenNodeToStandardNode(flow)
+    transformExecuteNodeToStandardNode(flow)
+    transformActionNodeToStandardNode(flow)
+    transformRouteNodeToStandardNode(flow)
 
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
     await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
