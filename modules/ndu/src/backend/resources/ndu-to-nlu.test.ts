@@ -1,5 +1,12 @@
+import 'reflect-metadata'
 import { ListenNode, TriggerNode, FlowNode } from 'botpress/sdk'
-import { removeSuccessFailureNodes, removeListenNodeAlways, transformExecuteNodeToStandardNode } from './ndu-to-nlu'
+import {
+  removeSuccessFailureNodes,
+  removeListenNodeAlways,
+  transformExecuteNodeToStandardNode,
+  transformSaySomethingToStandardNode
+} from './ndu-to-nlu'
+
 interface FlowNodeView {
   nodes: {
     id: string
@@ -81,6 +88,8 @@ describe('Migrate NDU to NLU workflow', () => {
       ]
     }
   })
+
+  afterEach(() => {})
 
   let flowUi: FlowNodeView = {
     nodes: [
@@ -422,6 +431,76 @@ describe('Migrate NDU to NLU workflow', () => {
 
     flowToTest.forEach(test => {
       transformExecuteNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
+
+  it.skip('Created buildin_text element from say_something node', async () => {
+    // Need to figured how to create an application botpress in the unit-test
+    // Create the CMS service
+    let flowToTest: FlowNode[] = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: [
+          {
+            id: '29980a4b1d',
+            name: 'node-b21f-copy',
+            next: [
+              {
+                condition: 'true',
+                node: 'success'
+              }
+            ],
+            onEnter: [],
+            onReceive: null,
+            type: 'say_something',
+            content: {
+              createOrUpdateContentElement: 'builtin_text',
+              formData: {
+                markdown$en: true,
+                typing$en: true,
+                text$en: '{{temp.response}}'
+              }
+            }
+          }
+        ]
+      }
+    ]
+    let flowToExpected: FlowNode[] = [
+      {
+        version: '0.0.1',
+        catchAll: {},
+        startNode: 'entry',
+        description: '',
+        nodes: [
+          {
+            id: '29980a4b1d',
+            name: 'node-b21f-copy',
+            next: [
+              {
+                condition: 'true',
+                node: 'success'
+              }
+            ],
+            onEnter: [],
+            onReceive: null,
+            type: 'standard',
+            content: {
+              createOrUpdateContentElement: '',
+              formData: {}
+            }
+          }
+        ]
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      // transformSaySomethingToStandardNode(test, 'weather', bp)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })

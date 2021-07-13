@@ -48,7 +48,25 @@ export const transformExecuteNodeToStandardNode = (flow: sdk.Flow) => {
   }
 }
 
-const updateAllFlows = async (ghost: sdk.ScopedGhostService) => {
+export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId: string, bp: typeof sdk.bp) => {
+  for (const node of flow.nodes) {
+    if (node.type === 'say_something') {
+      const standardNode = (node as unknown) as sdk.FlowNode
+      standardNode.type = 'standard'
+      standardNode.content = { contentType: '', formData: {} }
+
+      const createdNode = await bp.cms.createOrUpdateContentElement(
+        botId,
+        standardNode.content.contentType,
+        standardNode.content.formData
+      )
+      //@ts-ignore
+      standardNode.onEnter.push(createdNode)
+    }
+  }
+}
+
+const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: typeof sdk) => {
   const flowsPaths = await ghost.directoryListing('flows', '*.flow.json')
 
   for (const flowPath of flowsPaths) {
@@ -64,7 +82,8 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService) => {
 
     transformExecuteNodeToStandardNode(flow)
 
-    // I use upsert to update the current file
+    await transformSaySomethingToStandardNode(flow, botId, bp)
+
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
     await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
   }
@@ -74,7 +93,7 @@ const migrateToNLU = async (bp: typeof sdk, botId: string) => {
   const ghost = bp.ghost.forBot(botId)
 
   // Update the flows
-  await updateAllFlows(ghost)
+  await updateAllFlows(ghost, botId, bp)
 
   // Transform the documentation into a older flow
   await bp.config.mergeBotConfig(botId, { oneflow: false })
