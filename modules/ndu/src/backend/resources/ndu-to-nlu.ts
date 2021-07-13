@@ -56,6 +56,19 @@ export const transformListenNodeToStandardNode = (flow: sdk.Flow) => {
     }
   }
 }
+export const transformActionNodeToStandardNode = (flow: sdk.Flow) => {
+  // The logic for the action node is not implemented
+  for (const [index, node] of flow.nodes.entries()) {
+    if (node.type === 'action') {
+      // Will created a undefined properties in the array. I will remove the undefined property at the end
+      // I should update the frontend
+      delete flow.nodes[index]
+    }
+  }
+  // Remove all the Undefined Value
+  flow.nodes = flow.nodes.filter(Boolean)
+  console.log(flow.nodes)
+}
 
 export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId: string, bp: typeof sdk.bp) => {
   for (const node of flow.nodes) {

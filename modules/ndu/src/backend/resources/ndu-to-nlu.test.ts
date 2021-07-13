@@ -4,7 +4,8 @@ import {
   removeSuccessFailureNodes,
   removeListenNodeAlways,
   transformExecuteNodeToStandardNode,
-  transformSaySomethingToStandardNode
+  transformSaySomethingToStandardNode,
+  transformActionNodeToStandardNode
 } from './ndu-to-nlu'
 
 interface FlowNodeView {
@@ -497,7 +498,7 @@ describe('Migrate NDU to NLU workflow', () => {
     })
   })
 
-  it('Created Modified execute type to standard node', async () => {
+  it('Modified execute type to standard node', async () => {
     flowToTest[0].nodes = [
       {
         id: '29980a4b1d',
@@ -531,6 +532,31 @@ describe('Migrate NDU to NLU workflow', () => {
 
     flowToTest.forEach(test => {
       transformExecuteNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
+  it('Modified Action type to standard node', async () => {
+    flowToTest[0].nodes = [
+      {
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
+          {
+            condition: 'true',
+            node: 'success'
+          }
+        ],
+        onEnter: null,
+        onReceive: null,
+        type: 'action'
+      }
+    ]
+    flowToExpected[0].nodes = []
+
+    flowToTest.forEach(test => {
+      transformActionNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })
