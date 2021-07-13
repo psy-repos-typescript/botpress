@@ -5,7 +5,8 @@ import {
   removeListenNodeAlways,
   transformExecuteNodeToStandardNode,
   transformSaySomethingToStandardNode,
-  transformActionNodeToStandardNode
+  transformActionNodeToStandardNode,
+  transformRouteNodeToStandardNode
 } from './ndu-to-nlu'
 
 interface FlowNodeView {
@@ -557,6 +558,94 @@ describe('Migrate NDU to NLU workflow', () => {
 
     flowToTest.forEach(test => {
       transformActionNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
+
+  it('Modified Router type to standard node', async () => {
+    flowToTest[0].nodes = [
+      {
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
+          {
+            condition: "event.payload.parameters[0] === 'how_do_know'",
+            node: 'node-4bd2'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'not_locked'",
+            node: 'node-9c30'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'why_am_i_locked'",
+            node: 'node-78c0'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'which_account'",
+            node: 'node-caba'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'why_notification'",
+            node: 'node-9feb'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'dont_remember'",
+            node: 'node-464e'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'remember_pass'",
+            node: 'node-0d36'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'router'
+      }
+    ]
+    flowToExpected[0].nodes = [
+      {
+        id: '29980a4b1d',
+        name: 'node-b21f-copy',
+        next: [
+          {
+            condition: "event.payload.parameters[0] === 'how_do_know'",
+            node: 'node-4bd2'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'not_locked'",
+            node: 'node-9c30'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'why_am_i_locked'",
+            node: 'node-78c0'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'which_account'",
+            node: 'node-caba'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'why_notification'",
+            node: 'node-9feb'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'dont_remember'",
+            node: 'node-464e'
+          },
+          {
+            condition: "event.payload.parameters[0] === 'remember_pass'",
+            node: 'node-0d36'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'standard'
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      transformRouteNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })

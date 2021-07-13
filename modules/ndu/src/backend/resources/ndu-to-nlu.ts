@@ -67,7 +67,16 @@ export const transformActionNodeToStandardNode = (flow: sdk.Flow) => {
   }
   // Remove all the Undefined Value
   flow.nodes = flow.nodes.filter(Boolean)
-  console.log(flow.nodes)
+}
+
+export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
+  // The logic for the action node is not implemented
+  for (const [index, node] of flow.nodes.entries()) {
+    if (node.type === 'router') {
+      const standardNode = (node as unknown) as sdk.FlowNode
+      standardNode.type = 'standard'
+    }
+  }
 }
 
 export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId: string, bp: typeof sdk.bp) => {
