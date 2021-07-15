@@ -2,6 +2,7 @@ import * as sdk from 'botpress/sdk'
 import { asyncMiddleware as asyncMw } from 'common/http'
 import { upperFirst } from 'lodash'
 import migrateBot from './migrate'
+import migrateToNLU from './resources/ndu-to-nlu'
 
 export default async (bp: typeof sdk) => {
   const asyncMiddleware = asyncMw(bp.logger)
@@ -26,6 +27,17 @@ export default async (bp: typeof sdk) => {
     asyncMiddleware(async (req, res) => {
       try {
         await migrateBot(bp, req.params.botId)
+        res.sendStatus(200)
+      } catch (err) {
+        res.status(400).send(err.message)
+      }
+    })
+  )
+  router.post(
+    '/migrate-to-nlu',
+    asyncMiddleware(async (req, res) => {
+      try {
+        await migrateToNLU(bp, req.params.botId)
         res.sendStatus(200)
       } catch (err) {
         res.status(400).send(err.message)

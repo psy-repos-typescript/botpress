@@ -79,21 +79,36 @@ export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
   }
 }
 
-export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId: string, bp: typeof sdk.bp) => {
+export const validContentType = async (contentType: string, botId: string, bp: typeof sdk): Promise<boolean> => {
+  const config = await bp.bots.getBotById(botId)
+
+  return config.imports.contentTypes.includes(contentType ?? '')
+}
+
+export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId: string, bp: typeof sdk) => {
   for (const node of flow.nodes) {
     if (node.type === 'say_something') {
       const standardNode = (node as unknown) as sdk.FlowNode
       standardNode.type = 'standard'
-      standardNode.content = { contentType: '', formData: {} }
-
-      const createdNode = await bp.cms.createOrUpdateContentElement(
-        botId,
-        standardNode.content.contentType,
-        standardNode.content.formData
-      )
-      //@ts-ignore
-      standardNode.onEnter.push(createdNode)
+      try {
+        const contentType = (await validContentType(standardNode.content.contentType, botId, bp))
+          ? standardNode.content.contentType
+          : 'builtin_text'
+        const createdNode = await bp.cms.createOrUpdateContentElement(botId, contentType, standardNode.content.formData)
+        standardNode.content = { contentType: '', formData: {} }
+        //@ts-ignore
+        standardNode.onEnter.push(createdNode)
+      } catch (e) {
+        bp.logger.warn(`[NDU Migration] - ${e}`)
+      }
     }
+  }
+}
+
+export const modifiedStartNode = (flow: sdk.Flow) => {
+  // I don't know how to choice the entry node :S
+  if (flow.nodes[0]) {
+    flow.startNode = flow.nodes[0].name
   }
 }
 
@@ -114,9 +129,10 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     await transformSaySomethingToStandardNode(flow, botId, bp)
     transformExecuteNodeToStandardNode(flow)
     transformListenNodeToStandardNode(flow)
-    transformExecuteNodeToStandardNode(flow)
     transformActionNodeToStandardNode(flow)
     transformRouteNodeToStandardNode(flow)
+
+    modifiedStartNode(flow)
 
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
     await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
