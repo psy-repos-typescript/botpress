@@ -1,13 +1,6 @@
 import 'reflect-metadata'
 import { ListenNode, TriggerNode, FlowNode } from 'botpress/sdk'
-import {
-  removeSuccessFailureNodes,
-  removeListenNodeAlways,
-  transformExecuteNodeToStandardNode,
-  transformSaySomethingToStandardNode,
-  transformActionNodeToStandardNode,
-  transformRouteNodeToStandardNode
-} from './ndu-to-nlu'
+import * as NDU from './ndu-to-nlu'
 
 interface FlowNodeView {
   nodes: {
@@ -148,7 +141,7 @@ describe('Migrate NDU to NLU workflow', () => {
   }
 
   it('Return flow and flow UI without Start and End component', async () => {
-    removeSuccessFailureNodes(flow, flowUi)
+    NDU.removeSuccessFailureNodes(flow, flowUi)
     const expectFlow: ListenNode = {
       version: '0.0.1',
       catchAll: {},
@@ -371,7 +364,7 @@ describe('Migrate NDU to NLU workflow', () => {
 
     // Actual test
     flowToTest.forEach(flow => {
-      removeListenNodeAlways(flow)
+      NDU.removeListenNodeAlways(flow)
       expectedFlow.forEach(expected => {
         expect(flow).toEqual(expected)
       })
@@ -438,7 +431,7 @@ describe('Migrate NDU to NLU workflow', () => {
     ]
 
     flowToTest.forEach(test => {
-      transformExecuteNodeToStandardNode(test)
+      NDU.transformExecuteNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })
@@ -532,7 +525,7 @@ describe('Migrate NDU to NLU workflow', () => {
     ]
 
     flowToTest.forEach(test => {
-      transformExecuteNodeToStandardNode(test)
+      NDU.transformExecuteNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })
@@ -557,7 +550,7 @@ describe('Migrate NDU to NLU workflow', () => {
     flowToExpected[0].nodes = []
 
     flowToTest.forEach(test => {
-      transformActionNodeToStandardNode(test)
+      NDU.transformActionNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })
@@ -645,7 +638,33 @@ describe('Migrate NDU to NLU workflow', () => {
     ]
 
     flowToTest.forEach(test => {
-      transformRouteNodeToStandardNode(test)
+      NDU.transformRouteNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
+
+  it("Create Entry Node is the Flow doesn't have a node", async () => {
+    const payload = [1, 2, 3]
+
+    const spy = jest.spyOn(NDU, 'generateUUIDNodeFlow')
+    spy.mockReturnValue('abcdefgfig')
+
+    flowToTest[0].nodes = []
+    flowToExpected[0].nodes = [
+      {
+        id: 'abcdefgfig',
+        name: 'entry',
+        next: [],
+        onEnter: null,
+        onReceive: null,
+        type: 'standard'
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      NDU.modifiedStartNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })

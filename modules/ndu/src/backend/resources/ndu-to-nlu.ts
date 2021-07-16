@@ -106,10 +106,26 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
 }
 
 export const modifiedStartNode = (flow: sdk.Flow) => {
-  // I don't know how to choice the entry node :S
   if (flow.nodes[0]) {
+    // Pick a random node to use has entry
     flow.startNode = flow.nodes[0].name
+  } else {
+    // Create node to use as a placeholder. The code doesn't like to have no StartNode
+    const flowNode: sdk.FlowNode = {
+      id: generateUUIDNodeFlow(10),
+      name: 'entry',
+      onEnter: null,
+      onReceive: null,
+      type: 'standard',
+      next: []
+    }
+    flow.nodes.push(flowNode)
+    flow.startNode = flowNode.name
   }
+}
+
+export const generateUUIDNodeFlow = (length: number) => {
+  return [...Array(length)].map(i => (~~(Math.random() * 36)).toString(36)).join('') // Generate 10 random alpha-numeric char
 }
 
 const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: typeof sdk) => {
