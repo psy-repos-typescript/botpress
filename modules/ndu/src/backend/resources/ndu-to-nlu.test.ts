@@ -645,7 +645,7 @@ describe('Migrate NDU to NLU workflow', () => {
     })
   })
 
-  it("Create Entry Node is the Flow doesn't have a node", async () => {
+  it("Create Entry Node if the Flow doesn't have a node", async () => {
     const payload = [1, 2, 3]
 
     const spy = jest.spyOn(NDU, 'generateUUIDNodeFlow')
@@ -665,6 +665,57 @@ describe('Migrate NDU to NLU workflow', () => {
 
     flowToTest.forEach(test => {
       NDU.modifiedStartNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
+  it('Transform raw_js condition into a NLU flow', async () => {
+    flowToTest[0].nodes = [
+      {
+        id: '8b50032ee9',
+        name: 'node-0075',
+        next: [
+          {
+            condition: 'true',
+            node: 'node-9966'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'trigger',
+        conditions: [
+          {
+            id: 'raw_js',
+            params: {
+              label: 'Raw JS expression',
+              expression: "event.payload.method === 'edpp.edpp_faq'"
+            }
+          }
+        ],
+        activeWorkflow: false
+      }
+    ]
+    flowToExpected[0].nodes = [
+      {
+        id: '8b50032ee9',
+        name: 'node-0075',
+        next: [
+          {
+            condition: "event.payload.method === 'edpp.edpp_faq'",
+            node: 'node-9966'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'standard',
+        conditions: [],
+        activeWorkflow: false
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      NDU.transformRawNodeNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })

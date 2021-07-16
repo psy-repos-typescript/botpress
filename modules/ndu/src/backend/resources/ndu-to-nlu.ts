@@ -9,6 +9,8 @@ interface FlowNodeView {
   }[]
 }
 
+const STANDARD_NODE = 'standard'
+
 // Remove the Workflow success and Workflow end in the frontend
 export const removeSuccessFailureNodes = (flow: sdk.Flow, flowUi: FlowNodeView) => {
   const nodeTypes = new Map<sdk.FlowNodeType, sdk.FlowNodeType>([
@@ -74,7 +76,33 @@ export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
   for (const [index, node] of flow.nodes.entries()) {
     if (node.type === 'router') {
       const standardNode = (node as unknown) as sdk.FlowNode
-      standardNode.type = 'standard'
+      standardNode.type = STANDARD_NODE
+    }
+  }
+}
+export const transformRawNodeNodeToStandardNode = (flow: sdk.Flow) => {
+  for (const node of flow.nodes) {
+    // A listen node is a Skill node. I don't know why but all the skill node
+    // was containing the conditions id: 'always'. It's a big assumption
+    const triggerNode = (node as unknown) as sdk.TriggerNode
+    if (triggerNode.type === 'trigger') {
+      // I'm checking if one of the element is a condition that is always true
+      for (const rawTrigger of triggerNode.conditions) {
+        let removeCondition = false
+        if (rawTrigger.id === 'raw_js') {
+          const expression = rawTrigger.params.expression
+          // OK I still don't know if raw_js condition can have multiple condition or multiple next value.
+          if (triggerNode.next.length === 1) {
+            triggerNode.next[0].condition = expression
+            removeCondition = true
+          }
+        }
+        // Remove the condition
+        if (removeCondition === true) {
+          triggerNode.conditions = []
+          triggerNode.type = STANDARD_NODE
+        }
+      }
     }
   }
 }
@@ -89,7 +117,7 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
   for (const node of flow.nodes) {
     if (node.type === 'say_something') {
       const standardNode = (node as unknown) as sdk.FlowNode
-      standardNode.type = 'standard'
+      standardNode.type = STANDARD_NODE
       try {
         const contentType = (await validContentType(standardNode.content.contentType, botId, bp))
           ? standardNode.content.contentType
@@ -116,7 +144,7 @@ export const modifiedStartNode = (flow: sdk.Flow) => {
       name: 'entry',
       onEnter: null,
       onReceive: null,
-      type: 'standard',
+      type: STANDARD_NODE,
       next: []
     }
     flow.nodes.push(flowNode)
@@ -142,13 +170,15 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     // After this call the node can still have the ListenNode signature. At the end I need to remove all the value ListenNode from this migration
     removeListenNodeAlways(flow)
 
+    // All the Flow need to have a StartNode. I will change the Start Node in Other function
+    modifiedStartNode(flow)
+
     await transformSaySomethingToStandardNode(flow, botId, bp)
     transformExecuteNodeToStandardNode(flow)
     transformListenNodeToStandardNode(flow)
     transformActionNodeToStandardNode(flow)
     transformRouteNodeToStandardNode(flow)
-
-    modifiedStartNode(flow)
+    transformRawNodeNodeToStandardNode(flow)
 
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
     await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
