@@ -82,11 +82,8 @@ export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
 }
 export const transformRawNodeNodeToStandardNode = (flow: sdk.Flow) => {
   for (const node of flow.nodes) {
-    // A listen node is a Skill node. I don't know why but all the skill node
-    // was containing the conditions id: 'always'. It's a big assumption
     const triggerNode = (node as unknown) as sdk.TriggerNode
     if (triggerNode.type === 'trigger') {
-      // I'm checking if one of the element is a condition that is always true
       for (const rawTrigger of triggerNode.conditions) {
         let removeCondition = false
         if (rawTrigger.id === 'raw_js') {
@@ -94,6 +91,32 @@ export const transformRawNodeNodeToStandardNode = (flow: sdk.Flow) => {
           // OK I still don't know if raw_js condition can have multiple condition or multiple next value.
           if (triggerNode.next.length === 1) {
             triggerNode.next[0].condition = expression
+            removeCondition = true
+          }
+        }
+        // Remove the condition
+        if (removeCondition === true) {
+          triggerNode.conditions = []
+          triggerNode.type = STANDARD_NODE
+        }
+      }
+    }
+  }
+}
+
+export const transformUserIntentNodeToStandardNode = (flow: sdk.Flow) => {
+  for (const node of flow.nodes) {
+    const triggerNode = (node as unknown) as sdk.TriggerNode
+    if (triggerNode.type === 'trigger') {
+      for (const rawTrigger of triggerNode.conditions) {
+        let removeCondition = false
+        if (rawTrigger.id === 'user_intent_is') {
+          const expression = rawTrigger.params.expression
+          // OK I still don't know if raw_js condition can have multiple condition or multiple next value.
+          if (triggerNode.next.length === 1) {
+            // "condition": "event.nlu.intent.name === 'intents1'",
+
+            triggerNode.next[0].condition = "event.nlu.intent.name === '" + rawTrigger.params.intentName + "'"
             removeCondition = true
           }
         }

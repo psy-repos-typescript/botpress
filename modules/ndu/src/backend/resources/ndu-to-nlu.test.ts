@@ -721,4 +721,55 @@ describe('Migrate NDU to NLU workflow', () => {
       })
     })
   })
+
+  it('Transform user_intent_is condition into a NLU flow', async () => {
+    flowToTest[0].nodes = [
+      {
+        id: '8b50032ee9',
+        name: 'node-0075',
+        next: [
+          {
+            condition: 'true',
+            node: 'node-9966'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'trigger',
+        conditions: [
+          {
+            id: 'user_intent_is',
+            params: {
+              intentName: 'api-security.api_security_menu'
+            }
+          }
+        ],
+        activeWorkflow: false
+      }
+    ]
+    flowToExpected[0].nodes = [
+      {
+        id: '8b50032ee9',
+        name: 'node-0075',
+        next: [
+          {
+            condition: "event.nlu.intent.name === 'api-security.api_security_menu'",
+            node: 'node-9966'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'standard',
+        conditions: [],
+        activeWorkflow: false
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      NDU.transformUserIntentNodeToStandardNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
 })
