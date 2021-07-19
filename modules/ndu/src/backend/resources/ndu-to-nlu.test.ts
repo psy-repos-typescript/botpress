@@ -722,7 +722,7 @@ describe('Migrate NDU to NLU workflow', () => {
     })
   })
 
-  it('Transform user_intent_is condition into a NLU flow', async () => {
+  it('Transform condition into a NLU flow', async () => {
     flowToTest[0].nodes = [
       {
         id: '8b50032ee9',
@@ -745,6 +745,35 @@ describe('Migrate NDU to NLU workflow', () => {
           }
         ],
         activeWorkflow: false
+      },
+      {
+        id: '8b50032ee9',
+        name: 'node-0075',
+        next: [
+          {
+            condition: 'true',
+            node: 'node-9966'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'trigger',
+        conditions: [
+          {
+            id: 'user_intent_is',
+            params: {
+              intentName: 'api-security.api_security_menu'
+            }
+          },
+          {
+            id: 'raw_js',
+            params: {
+              label: 'Raw JS expression',
+              expression: "event.payload.method === 'edpp.edpp_faq'"
+            }
+          }
+        ],
+        activeWorkflow: false
       }
     ]
     flowToExpected[0].nodes = [
@@ -754,6 +783,25 @@ describe('Migrate NDU to NLU workflow', () => {
         next: [
           {
             condition: "event.nlu.intent.name === 'api-security.api_security_menu'",
+            node: 'node-9966'
+          }
+        ],
+        onEnter: [],
+        onReceive: null,
+        type: 'standard',
+        conditions: [],
+        activeWorkflow: false
+      },
+      {
+        id: '8b50032ee9',
+        name: 'node-0075',
+        next: [
+          {
+            condition: "event.nlu.intent.name === 'api-security.api_security_menu'",
+            node: 'node-9966'
+          },
+          {
+            condition: "event.payload.method === 'edpp.edpp_faq'",
             node: 'node-9966'
           }
         ],
