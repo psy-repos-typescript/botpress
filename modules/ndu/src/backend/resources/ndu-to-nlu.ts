@@ -1,7 +1,7 @@
 import * as sdk from 'botpress/sdk'
 import _ from 'lodash'
 import { bots as mountedBots } from '../'
-
+import { migrationConditions } from './conditions'
 interface FlowNodeView {
   nodes: {
     id: string
@@ -80,45 +80,19 @@ export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
     }
   }
 }
-export const transformRawNodeNodeToStandardNode = (flow: sdk.Flow) => {
+export const transformConditionNodeToStandardNode = (flow: sdk.Flow) => {
   for (const node of flow.nodes) {
     const triggerNode = (node as unknown) as sdk.TriggerNode
     if (triggerNode.type === 'trigger') {
+      const transitNode = triggerNode.next[0].node
+      triggerNode.next = []
       for (const rawTrigger of triggerNode.conditions) {
         let removeCondition = false
-        if (rawTrigger.id === 'raw_js') {
-          const expression = rawTrigger.params.expression
-          // OK I still don't know if raw_js condition can have multiple condition or multiple next value.
-          if (triggerNode.next.length === 1) {
-            triggerNode.next[0].condition = expression
-            removeCondition = true
-          }
-        }
-        // Remove the condition
-        if (removeCondition === true) {
-          triggerNode.conditions = []
-          triggerNode.type = STANDARD_NODE
-        }
-      }
-    }
-  }
-}
 
-export const transformUserIntentNodeToStandardNode = (flow: sdk.Flow) => {
-  for (const node of flow.nodes) {
-    const triggerNode = (node as unknown) as sdk.TriggerNode
-    if (triggerNode.type === 'trigger') {
-      for (const rawTrigger of triggerNode.conditions) {
-        let removeCondition = false
-        if (rawTrigger.id === 'user_intent_is') {
-          const expression = rawTrigger.params.expression
-          // OK I still don't know if raw_js condition can have multiple condition or multiple next value.
-          if (triggerNode.next.length === 1) {
-            // "condition": "event.nlu.intent.name === 'intents1'",
-
-            triggerNode.next[0].condition = "event.nlu.intent.name === '" + rawTrigger.params.intentName + "'"
-            removeCondition = true
-          }
+        const expression = _.find(migrationConditions, { id: rawTrigger.id })
+        if (expression) {
+          triggerNode.next.push({ condition: expression.evaluate(rawTrigger.params), node: transitNode })
+          removeCondition = true
         }
         // Remove the condition
         if (removeCondition === true) {
@@ -157,22 +131,17 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
 }
 
 export const modifiedStartNode = (flow: sdk.Flow) => {
-  if (flow.nodes[0]) {
-    // Pick a random node to use has entry
-    flow.startNode = flow.nodes[0].name
-  } else {
-    // Create node to use as a placeholder. The code doesn't like to have no StartNode
-    const flowNode: sdk.FlowNode = {
-      id: generateUUIDNodeFlow(10),
-      name: 'entry',
-      onEnter: null,
-      onReceive: null,
-      type: STANDARD_NODE,
-      next: []
-    }
-    flow.nodes.push(flowNode)
-    flow.startNode = flowNode.name
+  // Create node to use as a placeholder. The code doesn't like to have no StartNode
+  const flowNode: sdk.FlowNode = {
+    id: generateUUIDNodeFlow(10),
+    name: 'entry',
+    onEnter: null,
+    onReceive: null,
+    type: STANDARD_NODE,
+    next: []
   }
+  flow.nodes.push(flowNode)
+  flow.startNode = flowNode.name
 }
 
 export const generateUUIDNodeFlow = (length: number) => {
@@ -201,7 +170,7 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     transformListenNodeToStandardNode(flow)
     transformActionNodeToStandardNode(flow)
     transformRouteNodeToStandardNode(flow)
-    transformRawNodeNodeToStandardNode(flow)
+    transformConditionNodeToStandardNode(flow)
 
     await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
     await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
