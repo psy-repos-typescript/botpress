@@ -132,16 +132,18 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
 
 export const modifiedStartNode = (flow: sdk.Flow) => {
   // Create node to use as a placeholder. The code doesn't like to have no StartNode
-  const flowNode: sdk.FlowNode = {
-    id: generateUUIDNodeFlow(10),
-    name: 'entry',
-    onEnter: null,
-    onReceive: null,
-    type: STANDARD_NODE,
-    next: []
+  if (!_.find(flow.nodes, { name: 'entry' })) {
+    const flowNode: sdk.FlowNode = {
+      id: generateUUIDNodeFlow(10),
+      name: 'entry',
+      onEnter: null,
+      onReceive: null,
+      type: STANDARD_NODE,
+      next: []
+    }
+    flow.nodes.push(flowNode)
   }
-  flow.nodes.push(flowNode)
-  flow.startNode = flowNode.name
+  flow.startNode = 'entry'
 }
 
 export const generateUUIDNodeFlow = (length: number) => {

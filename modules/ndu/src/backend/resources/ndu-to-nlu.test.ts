@@ -646,12 +646,60 @@ describe('Migrate NDU to NLU workflow', () => {
   })
 
   it("Create Entry Node if the Flow doesn't have a node", async () => {
-    const payload = [1, 2, 3]
-
     const spy = jest.spyOn(NDU, 'generateUUIDNodeFlow')
     spy.mockReturnValue('abcdefgfig')
 
-    flowToTest[0].nodes = []
+    flowToTest[0].nodes = [
+      {
+        id: 'abcdefgfig',
+        name: 'not_entry',
+        next: [],
+        onEnter: null,
+        onReceive: null,
+        type: 'standard'
+      }
+    ]
+    flowToExpected[0].nodes = [
+      {
+        id: 'abcdefgfig',
+        name: 'not_entry',
+        next: [],
+        onEnter: null,
+        onReceive: null,
+        type: 'standard'
+      },
+      {
+        id: 'abcdefgfig',
+        name: 'entry',
+        next: [],
+        onEnter: null,
+        onReceive: null,
+        type: 'standard'
+      }
+    ]
+
+    flowToTest.forEach(test => {
+      NDU.modifiedStartNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
+
+  it("Doesn't create Entry Node because flow Have an entry Node", async () => {
+    const spy = jest.spyOn(NDU, 'generateUUIDNodeFlow')
+    spy.mockReturnValue('abcdefgfig')
+
+    flowToTest[0].nodes = [
+      {
+        id: 'abcdefgfig',
+        name: 'entry',
+        next: [],
+        onEnter: null,
+        onReceive: null,
+        type: 'standard'
+      }
+    ]
     flowToExpected[0].nodes = [
       {
         id: 'abcdefgfig',
@@ -670,6 +718,7 @@ describe('Migrate NDU to NLU workflow', () => {
       })
     })
   })
+
   it('Transform raw_js condition into a NLU flow', async () => {
     flowToTest[0].nodes = [
       {
