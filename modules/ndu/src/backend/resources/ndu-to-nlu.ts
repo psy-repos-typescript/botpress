@@ -84,6 +84,10 @@ export const transformConditionNodeToStandardNode = (flow: sdk.Flow) => {
   for (const node of flow.nodes) {
     const triggerNode = (node as unknown) as sdk.TriggerNode
     if (triggerNode.type === 'trigger') {
+      // In the NDU condition all the condition need to be true to jump to the next VALUE
+      // You can have multiple condition.
+
+      // I don't know How to make the entry node separate by a couple of And Conditions
       const transitNode = triggerNode.next[0].node
       triggerNode.next = []
       for (const rawTrigger of triggerNode.conditions) {
@@ -174,8 +178,12 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     transformRouteNodeToStandardNode(flow)
     transformConditionNodeToStandardNode(flow)
 
-    await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
-    await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
+    try {
+      await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
+      await ghost.upsertFile('flows', flowUiPath, JSON.stringify(flowUi, undefined, 2))
+    } catch (e) {
+      console.log(e)
+    }
   }
 }
 

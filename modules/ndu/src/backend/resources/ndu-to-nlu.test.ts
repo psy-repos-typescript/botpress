@@ -820,6 +820,10 @@ describe('Migrate NDU to NLU workflow', () => {
               label: 'Raw JS expression',
               expression: "event.payload.method === 'edpp.edpp_faq'"
             }
+          },
+          {
+            id: 'user_intent_misunderstood',
+            params: {}
           }
         ],
         activeWorkflow: false
@@ -851,6 +855,10 @@ describe('Migrate NDU to NLU workflow', () => {
           },
           {
             condition: "event.payload.method === 'edpp.edpp_faq'",
+            node: 'node-9966'
+          },
+          {
+            condition: "event.nlu.intent.name === 'node'",
             node: 'node-9966'
           }
         ],
