@@ -87,6 +87,7 @@ export const transformConditionNodeToStandardNode = (flow: sdk.Flow, main: sdk.F
   for (const node of flow.nodes) {
     const triggerNode = (node as unknown) as sdk.TriggerNode
     // Remove the node from the flow
+    // At the end, the trigger node will not be attach to anything. I will create another function to delete this.
     if (triggerNode.type === 'trigger') {
       // Migrate all the trigger node into the entry main file
 
@@ -140,6 +141,13 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
   }
 }
 
+export const removeTriggerNode = (flow: sdk.Flow) => {
+  // Remove all the empty element
+  _.remove(flow.nodes, ele => {
+    return !ele.next && !ele.onEnter && !ele.onReceive && ele.name !== 'entry'
+  })
+}
+
 export const modifiedStartNode = (flow: sdk.Flow) => {
   // Create node to use as a placeholder. The code doesn't like to have no StartNode
   if (!_.find(flow.nodes, { name: DEFAULT_NODE_NAME })) {
@@ -191,6 +199,8 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     transformActionNodeToStandardNode(flow)
     transformRouteNodeToStandardNode(flow)
     transformConditionNodeToStandardNode(flow, mainFlow, flowPath)
+
+    removeTriggerNode(flow)
 
     try {
       await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))

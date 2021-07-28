@@ -877,4 +877,24 @@ describe('Migrate NDU to NLU workflow', () => {
       })
     })
   })
+  it('Remove empty trigger node', async () => {
+    flowToTest[0].nodes = [
+      {
+        id: 'abcdefgfig',
+        name: 'entry',
+        next: [],
+        onEnter: null,
+        onReceive: null,
+        type: 'standard'
+      }
+    ]
+    flowToExpected[0].nodes = []
+
+    flowToTest.forEach(test => {
+      NDU.removeTriggerNode(test)
+      flowToExpected.forEach(expected => {
+        expect(test).toEqual(expected)
+      })
+    })
+  })
 })
