@@ -10,6 +10,7 @@ interface FlowNodeView {
 }
 
 const STANDARD_NODE = 'standard'
+const DEFAULT_NODE_NAME = 'entry'
 
 // Remove the Workflow success and Workflow end in the frontend
 export const removeSuccessFailureNodes = (flow: sdk.Flow, flowUi: FlowNodeView) => {
@@ -80,14 +81,16 @@ export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
     }
   }
 }
-export const transformConditionNodeToStandardNode = (flow: sdk.Flow) => {
+export const transformConditionNodeToStandardNode = (flow: sdk.Flow, main: sdk.Flow, pathName: string) => {
+  // Get entry main
+  const mainEntryNode = _.find<sdk.FlowNode>(main.nodes, { name: DEFAULT_NODE_NAME })
   for (const node of flow.nodes) {
     const triggerNode = (node as unknown) as sdk.TriggerNode
+    // Remove the node from the flow
     if (triggerNode.type === 'trigger') {
-      // In the NDU condition all the condition need to be true to jump to the next VALUE
-      // You can have multiple condition.
+      // Migrate all the trigger node into the entry main file
 
-      // I don't know How to make the entry node separate by a couple of And Conditions
+      // A trigger have only one next node
       const transitNode = triggerNode.next[0].node
       triggerNode.next = []
       for (const rawTrigger of triggerNode.conditions) {
@@ -95,7 +98,10 @@ export const transformConditionNodeToStandardNode = (flow: sdk.Flow) => {
 
         const expression = _.find(migrationConditions, { id: rawTrigger.id })
         if (expression) {
-          triggerNode.next.push({ condition: expression.evaluate(rawTrigger.params), node: transitNode })
+          mainEntryNode.next.push({
+            condition: expression.evaluate(rawTrigger.params),
+            node: `${pathName}#${transitNode}`
+          })
           removeCondition = true
         }
         // Remove the condition
@@ -136,10 +142,10 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
 
 export const modifiedStartNode = (flow: sdk.Flow) => {
   // Create node to use as a placeholder. The code doesn't like to have no StartNode
-  if (!_.find(flow.nodes, { name: 'entry' })) {
+  if (!_.find(flow.nodes, { name: DEFAULT_NODE_NAME })) {
     const flowNode: sdk.FlowNode = {
       id: generateUUIDNodeFlow(10),
-      name: 'entry',
+      name: DEFAULT_NODE_NAME,
       onEnter: null,
       onReceive: null,
       type: STANDARD_NODE,
@@ -147,16 +153,24 @@ export const modifiedStartNode = (flow: sdk.Flow) => {
     }
     flow.nodes.push(flowNode)
   }
-  flow.startNode = 'entry'
+  flow.startNode = DEFAULT_NODE_NAME
 }
 
 export const generateUUIDNodeFlow = (length: number) => {
   return [...Array(length)].map(i => (~~(Math.random() * 36)).toString(36)).join('') // Generate 10 random alpha-numeric char
 }
+// Special case for the main.flow.json.
+export const createEntryNode = (flow: sdk.Flow, flowUI: FlowNodeView) => {
+  modifiedStartNode(flow)
+  removeSuccessFailureNodes(flow, flowUI)
+}
 
 const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: typeof sdk) => {
   const flowsPaths = await ghost.directoryListing('flows', '*.flow.json')
-
+  const mainFlow = await ghost.readFileAsObject<sdk.Flow>('flows', 'main.flow.json')
+  const mainFlowUI = await ghost.readFileAsObject<FlowNodeView>('flows', 'main.ui.json')
+  createEntryNode(mainFlow, mainFlowUI)
+  // Add entry node by default
   for (const flowPath of flowsPaths) {
     const flowUiPath = flowPath.replace('.flow.json', '.ui.json')
 
@@ -176,7 +190,7 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
     transformListenNodeToStandardNode(flow)
     transformActionNodeToStandardNode(flow)
     transformRouteNodeToStandardNode(flow)
-    transformConditionNodeToStandardNode(flow)
+    transformConditionNodeToStandardNode(flow, mainFlow, flowPath)
 
     try {
       await ghost.upsertFile('flows', flowPath, JSON.stringify(flow, undefined, 2))
@@ -185,6 +199,8 @@ const updateAllFlows = async (ghost: sdk.ScopedGhostService, botId: string, bp: 
       console.log(e)
     }
   }
+  await ghost.upsertFile('flows', 'main.flow.json', JSON.stringify(mainFlow, undefined, 2))
+  await ghost.upsertFile('flows', 'main.ui.json', JSON.stringify(mainFlowUI, undefined, 2))
 }
 
 const migrateToNLU = async (bp: typeof sdk, botId: string) => {
