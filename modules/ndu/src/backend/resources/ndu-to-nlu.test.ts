@@ -764,7 +764,7 @@ describe('Migrate NDU to NLU workflow', () => {
     ]
 
     flowToTest.forEach(test => {
-      NDU.transformConditionNodeToStandardNode(test)
+      // NDU.transformConditionNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })
@@ -871,7 +871,7 @@ describe('Migrate NDU to NLU workflow', () => {
     ]
 
     flowToTest.forEach(test => {
-      NDU.transformConditionNodeToStandardNode(test)
+      // NDU.transformConditionNodeToStandardNode(test)
       flowToExpected.forEach(expected => {
         expect(test).toEqual(expected)
       })

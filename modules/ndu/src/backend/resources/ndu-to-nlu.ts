@@ -81,6 +81,7 @@ export const transformRouteNodeToStandardNode = (flow: sdk.Flow) => {
     }
   }
 }
+
 export const transformConditionNodeToStandardNode = (flow: sdk.Flow, main: sdk.Flow, pathName: string) => {
   // Get entry main
   const mainEntryNode = _.find<sdk.FlowNode>(main.nodes, { name: DEFAULT_NODE_NAME })
@@ -99,7 +100,7 @@ export const transformConditionNodeToStandardNode = (flow: sdk.Flow, main: sdk.F
 
         const expression = _.find(migrationConditions, { id: rawTrigger.id })
         if (expression) {
-          mainEntryNode.next.push({
+          const topicPathname = mainEntryNode.next.push({
             condition: expression.evaluate(rawTrigger.params),
             node: `${pathName}#${transitNode}`
           })
@@ -130,10 +131,11 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
         const contentType = (await validContentType(standardNode.content.contentType, botId, bp))
           ? standardNode.content.contentType
           : 'builtin_text'
+        // Create element and use the new element on the onEnter
         const createdNode = await bp.cms.createOrUpdateContentElement(botId, contentType, standardNode.content.formData)
         standardNode.content = { contentType: '', formData: {} }
-        //@ts-ignore
-        standardNode.onEnter.push(createdNode)
+        // Parse the format
+        standardNode.onEnter = [`say #!${createdNode}`]
       } catch (e) {
         bp.logger.warn(`[NDU Migration] - ${e}`)
       }
@@ -144,7 +146,7 @@ export const transformSaySomethingToStandardNode = async (flow: sdk.Flow, botId:
 export const removeTriggerNode = (flow: sdk.Flow) => {
   // Remove all the empty element
   _.remove(flow.nodes, ele => {
-    return !ele.next && !ele.onEnter && !ele.onReceive && ele.name !== 'entry'
+    return _.isEmpty(ele.next) && _.isEmpty(ele.onEnter) && _.isElement(ele.onReceive) && ele.name !== 'entry'
   })
 }
 
