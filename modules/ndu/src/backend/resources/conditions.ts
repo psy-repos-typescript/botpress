@@ -11,19 +11,19 @@ export const migrationConditions: MigrationCondition[] = [
   {
     id: 'user_channel_is',
     evaluate: params => {
-      return ''
+      return "event.channel === '" + params.channelName + "'"
     }
   },
   {
     id: 'user_language_is',
     evaluate: params => {
-      return ''
+      return "event.state.user.language === '" + params.language + "'"
     }
   },
   {
     id: 'user_intent_is',
     evaluate: params => {
-      return `event.nlu.intent.name = '${params.intentName}'`
+      return "event.nlu.intent.name === '" + params.intentName + "'"
     }
   },
   {
@@ -41,7 +41,11 @@ export const migrationConditions: MigrationCondition[] = [
   {
     id: 'user_topic_source',
     evaluate: params => {
-      return ''
+      return (
+        "event.state.session.lastTopics && event.state.session.lastTopics[event.state.session.lastTopics.length -1 ] === '" +
+        params.topicName +
+        "'"
+      )
     }
   },
   {
@@ -53,13 +57,13 @@ export const migrationConditions: MigrationCondition[] = [
   {
     id: 'user_already_spoke',
     evaluate: event => {
-      return ''
+      return 'event.state.session.lastMessages && event.state.session.lastMessages.length > 0'
     }
   },
   {
     id: 'outside_flow_node',
     evaluate: event => {
-      return ''
+      return '!event.state.context.currentFlow && !event.state.context.currentNode'
     }
   },
   {
