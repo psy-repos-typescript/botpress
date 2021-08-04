@@ -858,7 +858,7 @@ describe('Migrate NDU to NLU workflow', () => {
             node: 'node-9966'
           },
           {
-            condition: "event.nlu.intent.name === 'node'",
+            condition: "event.nlu.intent.name === 'none'",
             node: 'node-9966'
           }
         ],
