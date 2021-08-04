@@ -35,7 +35,7 @@ export const migrationConditions: MigrationCondition[] = [
   {
     id: 'user_intent_misunderstood',
     evaluate: event => {
-      return "event.nlu.intent.name = 'none'"
+      return "event.nlu.intent.name === 'none'"
     }
   },
   {
@@ -66,28 +66,24 @@ export const migrationConditions: MigrationCondition[] = [
       return '!event.state.context.currentFlow && !event.state.context.currentNode'
     }
   },
-  {
-    id: 'custom_confidence',
-    evaluate: params => {
-      return ''
-    }
-  },
+  // Not use what to-do with it
+  // {
+  //   id: 'custom_confidence',
+  //   evaluate: params => {
+  //     return ''
+  //   }
+  // },
   {
     id: 'always',
     evaluate: () => {
       return ''
     }
-  },
-  {
-    id: 'type_text',
-    evaluate: params => {
-      return ''
-    }
-  },
-  {
-    id: 'workflow_ended',
-    evaluate: params => {
-      return ''
-    }
   }
+  // Probably should be transformed into a skill choice
+  // {
+  //   id: 'type_text',
+  //   evaluate: params => {
+  //     return ''
+  //   }
+  // },
 ]
