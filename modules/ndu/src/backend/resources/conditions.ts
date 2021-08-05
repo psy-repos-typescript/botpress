@@ -66,7 +66,7 @@ export const migrationConditions: MigrationCondition[] = [
       return '!event.state.context.currentFlow && !event.state.context.currentNode'
     }
   },
-  // Not use what to-do with it
+  // I might created a hook or action to reproduce this behavior
   // {
   //   id: 'custom_confidence',
   //   evaluate: params => {
@@ -79,11 +79,4 @@ export const migrationConditions: MigrationCondition[] = [
       return ''
     }
   }
-  // Probably should be transformed into a skill choice
-  // {
-  //   id: 'type_text',
-  //   evaluate: params => {
-  //     return ''
-  //   }
-  // },
 ]
