@@ -369,18 +369,19 @@ export class HTTPServer {
       this.setupUILite(this.app)
 
       this.adminRouter.setupRoutes(this.app)
-      this.messagingRouter.setupRoutes()
     }
 
+    this.messagingRouter.setupRoutes()
     await this.botsRouter.setupRoutes(this.app)
 
     this.internalRouter.setupRoutes()
     this.app.use('/api/internal', this.internalRouter.router)
 
+    this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
+
     if (!process.IS_RUNTIME) {
       this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
 
-      this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
       this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
 
       this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
