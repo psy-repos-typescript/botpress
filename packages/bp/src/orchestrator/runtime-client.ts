@@ -11,7 +11,7 @@ export interface RuntimeParams {
   EXTERNAL_URL: string
   APP_SECRET: string
   ROOT_PATH: string
-  CORE_LOCAL_URL: string
+  CORE_PORT: string
   PRO_ENABLED: string
 }
 
@@ -70,7 +70,6 @@ export const requestRuntimeStartup = (webWorkerPort: number) => {
       ROOT_PATH: process.ROOT_PATH,
       APP_SECRET: process.APP_SECRET,
       CORE_PORT: webWorkerPort,
-      CORE_LOCAL_URL: process.LOCAL_URL,
       PRO_ENABLED: process.IS_PRO_ENABLED?.toString()
     }
   })
@@ -84,11 +83,18 @@ export const setupRuntimeWorker = () => {
     headers: { authorization: process.INTERNAL_PASSWORD },
     baseURL: `http://localhost:${process.env.CORE_PORT}/api/internal`
   })
+
+  process.BOTPRESS_EVENTS.onAny((event, args) => {
+    coreActions.emitBotpressEvent({ event, args })
+  })
 }
 
 export const coreActions = {
   sendOutgoing: async payload => {
     await coreClient?.post('/sendEvent', payload)
+  },
+  emitBotpressEvent: payload => {
+    void coreClient?.post('/emitBotpressEvent', payload)
   }
 }
 
@@ -131,7 +137,6 @@ export const startRuntime = async (logger: sdk.Logger, params: RuntimeParams) =>
     INTERNAL_PASSWORD: process.INTERNAL_PASSWORD,
     BP_DATA_FOLDER: path.join(process.PROJECT_LOCATION, 'data'),
     EXTERNAL_URL: params.EXTERNAL_URL,
-    CORE_LOCAL_URL: params.CORE_LOCAL_URL,
     APP_SECRET: params.APP_SECRET,
     ROOT_PATH: params.ROOT_PATH,
     PORT: runtimePort,

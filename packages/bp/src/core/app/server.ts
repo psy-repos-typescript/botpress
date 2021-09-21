@@ -530,7 +530,7 @@ export class HTTPServer {
   async getAxiosConfigForBot(botId: string, options?: AxiosOptions): Promise<AxiosBotConfig> {
     let basePath = options?.localUrl ? process.LOCAL_URL : process.EXTERNAL_URL
     if (process.IS_RUNTIME && options?.localUrl) {
-      basePath = process.env.CORE_LOCAL_URL!
+      basePath = `http://localhost:${process.env.CORE_PORT}`
     }
 
     const serverToken = generateUserToken({

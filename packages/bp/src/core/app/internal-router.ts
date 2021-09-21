@@ -142,14 +142,22 @@ export class InternalRouter extends CustomRouter {
       })
     )
 
-    if (process.IS_RUNTIME || process.RUNTIME_COUNT) {
-      router.post(
-        '/sendEvent',
-        this.asyncMiddleware(async (req, res) => {
-          await this.eventEngine.sendEvent(new IOEvent(req.body))
-          res.sendStatus(200)
-        })
-      )
-    }
+    router.post(
+      '/sendEvent',
+      this.asyncMiddleware(async (req, res) => {
+        await this.eventEngine.sendEvent(new IOEvent(req.body))
+        res.sendStatus(200)
+      })
+    )
+
+    router.post(
+      '/emitBotpressEvent',
+      this.asyncMiddleware(async (req, res) => {
+        const { event, args } = req.body
+        process.BOTPRESS_EVENTS.emit(event, args)
+
+        res.sendStatus(200)
+      })
+    )
   }
 }

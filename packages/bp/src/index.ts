@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events'
+import { EventEmitter2 } from 'eventemitter2'
 
 global['NativePromise'] = global.Promise
 
@@ -46,10 +46,9 @@ if (process.env.APP_DATA_PATH) {
 }
 
 process.IS_FAILSAFE = yn(process.env.BP_FAILSAFE)
-process.BOTPRESS_EVENTS = new EventEmitter()
+process.BOTPRESS_EVENTS = new EventEmitter2()
 process.BOTPRESS_EVENTS.setMaxListeners(1000)
 global.BOTPRESS_CORE_EVENT = (event, args) => {
-  console.log(event, args)
   process.BOTPRESS_EVENTS.emit(event, args)
 }
 

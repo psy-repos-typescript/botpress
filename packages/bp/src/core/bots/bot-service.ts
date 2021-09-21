@@ -623,6 +623,9 @@ export class BotService {
     await this._updateBotHealthDebounce()
     this._invalidateBotIds()
     debug.forBot(botId, `Unmount took ${Date.now() - startTime}ms`)
+
+    // Ensures cleanup since the emit was removed when executing hooks.
+    process.BOTPRESS_EVENTS.emit('after_bot_unmount', { botId })
   }
 
   private _invalidateBotIds(): void {

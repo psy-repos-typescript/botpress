@@ -268,7 +268,6 @@ export class HookService {
     const botId = _.get(hook.args, 'event.botId')
 
     hook.debug.forBot(botId, 'before execute %o', { path: hookScript.path, botId, args: _.omit(hook.args, ['bp']) })
-    process.BOTPRESS_EVENTS.emit(hook.folder, hook.args)
 
     if (runOutsideVm(scope)) {
       await this.runWithoutVm(hookScript, hook, botId, _require)

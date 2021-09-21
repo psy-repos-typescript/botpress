@@ -52,7 +52,7 @@ declare namespace NodeJS {
     TELEMETRY_URL: string
     core_env: BotpressEnvironmentVariables
     distro: OSDistribution
-    BOTPRESS_EVENTS: EventEmitter
+    BOTPRESS_EVENTS: any
     AUTO_MIGRATE: boolean
     MIGRATE_CMD?: 'up' | 'down'
     MIGRATE_TARGET?: string
