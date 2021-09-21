@@ -73,6 +73,10 @@ export class BotsRouter extends CustomRouter {
 
     this.router.use('/converse', this.converseRouter.router)
 
+    if (process.IS_RUNTIME) {
+      return
+    }
+
     this.router.get(
       '/media/:filename',
       this.asyncMiddleware(async (req, res) => {
@@ -93,10 +97,6 @@ export class BotsRouter extends CustomRouter {
           .send(contents)
       })
     )
-
-    if (process.IS_RUNTIME) {
-      return
-    }
 
     this.router.use('/nlu', this.nluRouter.router)
     this.router.use('/messaging', this.messagingRouter.router)
