@@ -6,6 +6,32 @@ The runtime has the following properties:
 - Some methods of the SDK are not available (nothing can be used to change the bot while in this mode)
 - Almost all backend routes are disabled
 
+### Methods removed from the SDK of actions/hooks
+
+These methods are not available when running as a runtime.
+
+http.createShortLink
+http.deleteShortLink
+http.createRouterForBot
+http.deleteRouterForBot
+events.registerMiddleware
+events.removeMiddleware
+dialog.getConditions
+config.getModuleConfig
+config.getModuleConfigForBot
+config.mergeBotConfig
+bots.exportBot
+bots.importBot
+bots.listBotRevisions
+bots.createBotRevision
+bots.rollbackBotToRevision
+cms.deleteContentElements
+cms.createOrUpdateContentElement
+cms.saveFile
+ghost.[forBot|forGlobal|forBots].upsertFile
+ghost.[forBot|forGlobal|forBots].renameFile
+ghost.[forBot|forGlobal|forBots].deleteFile
+
 ### Start BP with multiple runtimes
 
 This mode will spin the normal Botpress server, but will send incoming events to a subprocess (a runtime). It will spin smaller runtimes which will handle everything related to the events/dialog/action processing/hooks/etc. It uses the lite SDK, and if there's a problem, they restart quickly.
