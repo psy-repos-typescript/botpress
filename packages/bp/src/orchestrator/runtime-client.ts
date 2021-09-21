@@ -79,14 +79,16 @@ export const setupRuntimeWorker = () => {
   process.SERVER_ID = process.env.SERVER_ID!
   process.INTERNAL_PASSWORD = process.env.INTERNAL_PASSWORD!
 
-  coreClient = axios.create({
-    headers: { authorization: process.INTERNAL_PASSWORD },
-    baseURL: `http://localhost:${process.env.CORE_PORT}/api/internal`
-  })
+  if (process.env.CORE_PORT) {
+    coreClient = axios.create({
+      headers: { authorization: process.INTERNAL_PASSWORD },
+      baseURL: `http://localhost:${process.env.CORE_PORT}/api/internal`
+    })
 
-  process.BOTPRESS_EVENTS.onAny((event, args) => {
-    coreActions.emitBotpressEvent({ event, args })
-  })
+    process.BOTPRESS_EVENTS.onAny((event, args) => {
+      coreActions.emitBotpressEvent({ event, args })
+    })
+  }
 }
 
 export const coreActions = {

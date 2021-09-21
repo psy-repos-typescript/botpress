@@ -7,7 +7,7 @@ import cluster from 'cluster'
 import { BotpressApp, createApp, createLoggerProvider } from 'core/app/core-loader'
 import { ModuleConfigEntry } from 'core/config'
 import { LoggerProvider } from 'core/logger'
-import { ModuleLoader, ModuleResolver } from 'core/modules'
+import { ModuleLoader, ModuleResolver, ModuleResourceLoader } from 'core/modules'
 import fs from 'fs'
 import { AppLifecycle, AppLifecycleEvents } from 'lifecycle'
 import _ from 'lodash'
@@ -110,6 +110,17 @@ async function prepareLocalModules(app: BotpressApp, logger: sdk.Logger) {
 
 async function startRuntime(app: BotpressApp, logger: sdk.Logger) {
   setupRuntimeWorker()
+
+  // If there is no CORE_PORT, then we must disable all modules (except builtins one)
+  if (!process.env.CORE_PORT) {
+    const globalConfig = await app.config.getBotpressConfig()
+    const modules = _.uniqBy(globalConfig.modules, x => x.location).map(x => x.location.replace('MODULES_ROOT/', ''))
+
+    for (const mod of modules) {
+      const mrl = new ModuleResourceLoader(logger, mod, app.ghost)
+      await mrl.disableResources()
+    }
+  }
 
   showBanner({ title: 'Botpress Runtime', version: sdk.version, logScopeLength: 9, bannerWidth: 75, logger })
 

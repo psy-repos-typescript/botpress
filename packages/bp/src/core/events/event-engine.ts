@@ -193,19 +193,24 @@ export class EventEngine {
 
   async sendEvent(event: sdk.IO.Event): Promise<void> {
     this.validateEvent(event)
-    const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
-
-    if (!process.IS_RUNTIME && process.RUNTIME_COUNT && isIncoming(event)) {
-      await runtimeActions.sendIncoming(event)
-      return
-    }
 
     if (event.debugger) {
       addStepToEvent(event, StepScopes.Received)
       this.eventCollector.storeEvent(event)
     }
 
+    const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
+
+    // if (!process.IS_RUNTIME && process.RUNTIME_COUNT && isIncoming(event)) {
+    //   await runtimeActions.sendIncoming(event)
+    //   return
+    // }
+
     if (isIncoming(event)) {
+      if (!process.IS_RUNTIME && process.RUNTIME_COUNT) {
+        return runtimeActions.sendIncoming(event)
+      }
+
       debugIncoming.forBot(event.botId, 'send ', event)
       incrementMetric('eventsIn.count')
       this.onSendIncoming && (await this.onSendIncoming(event))
