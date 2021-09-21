@@ -16,7 +16,7 @@ import { ExternalAuthConfig, ConfigProvider } from 'core/config'
 import { ConverseService } from 'core/converse'
 import { FlowService, SkillService } from 'core/dialog'
 import { JobService } from 'core/distributed'
-import { EventRepository } from 'core/events'
+import { EventEngine, EventRepository } from 'core/events'
 import { AlertingService, MonitoringService } from 'core/health'
 import { LogsRepository } from 'core/logger'
 import { MediaServiceProvider, MediaRouter } from 'core/media'
@@ -128,7 +128,8 @@ export class HTTPServer {
     @inject(TYPES.QnaService) private qnaService: QnaService,
     @inject(TYPES.MessagingService) private messagingService: MessagingService,
     @inject(TYPES.ObjectCache) private objectCache: MemoryObjectCache,
-    @inject(TYPES.EventRepository) private eventRepo: EventRepository
+    @inject(TYPES.EventRepository) private eventRepo: EventRepository,
+    @inject(TYPES.EventEngine) private eventEngine: EventEngine
   ) {
     this.app = express()
 
@@ -203,6 +204,7 @@ export class HTTPServer {
       this.realtime,
       this.objectCache,
       this.botService,
+      eventEngine,
       this
     )
 
@@ -363,22 +365,28 @@ export class HTTPServer {
       res.send(process.BOTPRESS_VERSION)
     })
 
-    this.setupUILite(this.app)
-    this.adminRouter.setupRoutes(this.app)
-    await this.botsRouter.setupRoutes(this.app)
+    if (!process.IS_RUNTIME) {
+      this.setupUILite(this.app)
+
+      this.adminRouter.setupRoutes(this.app)
+      this.messagingRouter.setupRoutes()
+      await this.botsRouter.setupRoutes(this.app)
+    }
+
     this.internalRouter.setupRoutes()
-    this.messagingRouter.setupRoutes()
-
-    this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
-
     this.app.use('/api/internal', this.internalRouter.router)
-    this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
-    this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
 
-    this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
-    this.app.use(`${BASE_API_PATH}/telemetry`, this.telemetryRouter.router)
-    this.app.use(`${BASE_API_PATH}/media`, this.mediaRouter.router)
-    this.app.use('/s', this.shortLinksRouter.router)
+    if (!process.IS_RUNTIME) {
+      this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
+
+      this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
+      this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
+
+      this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
+      this.app.use(`${BASE_API_PATH}/telemetry`, this.telemetryRouter.router)
+      this.app.use(`${BASE_API_PATH}/media`, this.mediaRouter.router)
+      this.app.use('/s', this.shortLinksRouter.router)
+    }
 
     this.app.use((err, _req, _res, next) => {
       if (err instanceof UnlicensedError) {
@@ -415,16 +423,25 @@ export class HTTPServer {
     process.EXTERNAL_URL = process.env.EXTERNAL_URL || config.externalUrl || `http://${process.HOST}:${process.PORT}`
     process.LOCAL_URL = `http://${process.HOST}:${process.PORT}${process.ROOT_PATH}`
 
-    process.send!({ type: MessageType.RegisterProcess, processType: 'web', port: process.PORT })
+    if (process.IS_RUNTIME) {
+      process.send!({
+        type: MessageType.RegisterProcess,
+        processType: 'runtime',
+        port: process.PORT,
+        runtimeId: process.env.RUNTIME_ID
+      })
+    } else {
+      process.send!({ type: MessageType.RegisterProcess, processType: 'web', port: process.PORT })
 
-    if (process.PORT !== config.port) {
-      this.logger.warn(`Configured port ${config.port} is already in use. Using next port available: ${process.PORT}`)
-    }
+      if (process.PORT !== config.port) {
+        this.logger.warn(`Configured port ${config.port} is already in use. Using next port available: ${process.PORT}`)
+      }
 
-    if (!process.env.EXTERNAL_URL && !config.externalUrl) {
-      this.logger.warn(
-        `External URL is not configured. Using default value of ${process.EXTERNAL_URL}. Some features may not work properly`
-      )
+      if (!process.env.EXTERNAL_URL && !config.externalUrl) {
+        this.logger.warn(
+          `External URL is not configured. Using default value of ${process.EXTERNAL_URL}. Some features may not work properly`
+        )
+      }
     }
 
     const hostname = config.host === 'localhost' ? undefined : config.host
@@ -510,7 +527,11 @@ export class HTTPServer {
   }
 
   async getAxiosConfigForBot(botId: string, options?: AxiosOptions): Promise<AxiosBotConfig> {
-    const basePath = options?.localUrl ? process.LOCAL_URL : process.EXTERNAL_URL
+    let basePath = options?.localUrl ? process.LOCAL_URL : process.EXTERNAL_URL
+    if (process.IS_RUNTIME && options?.localUrl) {
+      basePath = process.env.CORE_LOCAL_URL!
+    }
+
     const serverToken = generateUserToken({
       email: SERVER_USER,
       strategy: SERVER_USER_STRATEGY,

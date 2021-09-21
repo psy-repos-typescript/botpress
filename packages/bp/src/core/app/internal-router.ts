@@ -4,6 +4,7 @@ import { UnauthorizedError } from 'common/http'
 import { BotService } from 'core/bots'
 import { MemoryObjectCache } from 'core/bpfs'
 import { CMSService } from 'core/cms'
+import { EventEngine, IOEvent } from 'core/events'
 import { ModuleLoader } from 'core/modules'
 import { RealtimeService, RealTimePayload } from 'core/realtime'
 import { CustomRouter } from 'core/routers/customRouter'
@@ -20,6 +21,7 @@ export class InternalRouter extends CustomRouter {
     private realtime: RealtimeService,
     private objectCache: MemoryObjectCache,
     private botService: BotService,
+    private eventEngine: EventEngine,
     private httpServer: HTTPServer
   ) {
     super('Internal', logger, Router({ mergeParams: true }))
@@ -139,5 +141,15 @@ export class InternalRouter extends CustomRouter {
         res.sendStatus(200)
       })
     )
+
+    if (process.IS_RUNTIME || process.RUNTIME_COUNT) {
+      router.post(
+        '/sendEvent',
+        this.asyncMiddleware(async (req, res) => {
+          await this.eventEngine.sendEvent(new IOEvent(req.body))
+          res.sendStatus(200)
+        })
+      )
+    }
   }
 }

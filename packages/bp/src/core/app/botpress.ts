@@ -113,8 +113,10 @@ export class Botpress {
 
     this.config = await this.configProvider.getBotpressConfig()
 
-    this.trackStart()
-    this.trackHeartbeat()
+    if (!process.IS_RUNTIME) {
+      this.trackStart()
+      this.trackHeartbeat()
+    }
 
     setDebugScopes(process.core_env.DEBUG || (process.IS_PRODUCTION ? '' : 'bp:dialog'))
 
@@ -123,18 +125,30 @@ export class Botpress {
     this.displayRedisChannelPrefix()
     await this.restoreDebugScope()
     await this.checkJwtSecret()
-    await this.loadModules(options.modules)
-    await this.migrationService.initialize()
-    await this.cleanDisabledModules()
+
+    if (!process.IS_RUNTIME) {
+      await this.loadModules(options.modules)
+      await this.migrationService.initialize()
+      await this.cleanDisabledModules()
+    }
+
     await this.initializeServices()
-    await this.checkEditionRequirements()
-    await this.deployAssets()
-    await this.maybeStartLocalSTAN()
-    await this.startRealtime()
+
+    if (!process.IS_RUNTIME) {
+      await this.checkEditionRequirements()
+      await this.deployAssets()
+      await this.maybeStartLocalSTAN()
+      await this.startRealtime()
+    }
+
     await this.startServer()
-    await this.maybeStartLocalMessagingServer()
+
+    if (!process.IS_RUNTIME) {
+      await this.maybeStartLocalMessagingServer()
+      await this.maybeStartLocalActionServer()
+    }
+
     await this.discoverBots()
-    await this.maybeStartLocalActionServer()
 
     if (this.config.sendUsageStats) {
       await this.statsService.start()
@@ -336,7 +350,10 @@ export class Botpress {
 
   @WrapErrorsWith('Error while discovering bots')
   async discoverBots(): Promise<void> {
-    await AppLifecycle.waitFor(AppLifecycleEvents.MODULES_READY)
+    if (!process.IS_RUNTIME) {
+      await AppLifecycle.waitFor(AppLifecycleEvents.MODULES_READY)
+    }
+
     const botsRef = await this.workspaceService.getBotRefs()
     const botsIds = await this.botService.getBotsIds()
     const unlinked = _.difference(botsIds, botsRef)

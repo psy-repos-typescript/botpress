@@ -130,6 +130,9 @@ export class ConfigsStats extends TelemetryStats {
   private async getModulesConfigs(): Promise<ModuleConfigEvent[]> {
     const bots = BotService.getMountedBots()
     const modules = _.intersection(BUILTIN_MODULES, Object.keys(process.LOADED_MODULES))
+    if (!modules.length) {
+      return []
+    }
 
     return (await Promise.map(modules, this.getConfigsByModule(bots)))
       .reduce((acc, cur) => [...acc, ...cur])

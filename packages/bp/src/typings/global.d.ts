@@ -30,6 +30,10 @@ declare namespace NodeJS {
     PORT: number
     STUDIO_PORT: number
     MESSAGING_PORT: number
+    /** This is used internally to setup the server as a simple runtime */
+    IS_RUNTIME: boolean
+    /** The number of runtime instances to spin. 0 means we execute the standard Botpress server */
+    RUNTIME_COUNT?: number
     NLU_PORT: number
     PROXY?: string
     EXTERNAL_URL: string

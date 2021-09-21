@@ -4,7 +4,7 @@
  * this SDK (Yes, all those beautiful features!) to kick start your development. Missing something important?
  * Please let us know in our official Github Repo!
  */
-declare module 'botpress/sdk' {
+declare module 'botpress/runtime-sdk' {
   import { NextFunction, Request, Response, Router } from 'express'
   import Knex from 'knex'
   export interface KnexExtension {
@@ -473,7 +473,6 @@ declare module 'botpress/sdk' {
       incomingEventId?: string
       debugger?: boolean
       messageId?: string
-      flags?: any
     }
 
     /**
@@ -824,18 +823,9 @@ declare module 'botpress/sdk' {
   }
 
   export interface ScopedGhostService {
-    /**
-     * Insert or Update the file at the specified location
-     * @param rootFolder - Folder relative to the scoped parent
-     * @param file - The name of the file
-     * @param content - The content of the file
-     */
-    upsertFile(rootFolder: string, file: string, content: string | Buffer, options?: UpsertOptions): Promise<void>
     readFileAsBuffer(rootFolder: string, file: string): Promise<Buffer>
     readFileAsString(rootFolder: string, file: string): Promise<string>
     readFileAsObject<T>(rootFolder: string, file: string): Promise<T>
-    renameFile(rootFolder: string, fromName: string, toName: string): Promise<void>
-    deleteFile(rootFolder: string, file: string): Promise<void>
     /**
      * List all the files matching the ending pattern in the folder.
      * DEPRECATE WARNING: exclude and includedDotFiles must be defined in options in future versions
@@ -1103,11 +1093,6 @@ declare module 'botpress/sdk' {
      * This function resides in the javascript definition of the Content Type.
      */
     computePreviewText?: (formData: object) => string
-  }
-
-  export type CustomContentType = Omit<Partial<ContentType>, 'id'> & {
-    /** A custom component must extend a builtin type */
-    extends: string
   }
 
   /**
@@ -1763,26 +1748,6 @@ declare module 'botpress/sdk' {
     export function deleteShortLink(name): void
 
     /**
-     * Create a new router for a module. Once created, use them to register new endpoints. Routers created
-     * with this method are accessible via the url /mod/{routerName}
-     *
-     * @example const router = bp.http.createRouterForBot('myModule')
-     * @example router.get('/list', ...)
-     * @example axios.get('/mod/myModule/list')
-     * @param routerName - The name of the router
-     * @param options - Additional options to apply to the router
-     * @param router - The router
-     */
-    export function createRouterForBot(routerName: string, options?: RouterOptions): RouterExtension
-
-    /**
-     * This method is meant to unregister a router before unloading a module. It is meant to be used in a development environment.
-     * It could cause unpredictable behavior in production
-     * @param routerName The name of the router (must have been registered with createRouterForBot)
-     */
-    export function deleteRouterForBot(routerName: string)
-
-    /**
      * Returns the required configuration to make an API call to another module by specifying only the relative path.
      * @param botId - The ID of the bot for which to get the configuration
      * @returns The configuration to use
@@ -1954,36 +1919,13 @@ declare module 'botpress/sdk' {
       flowName: string,
       nodeName?: string
     ): Promise<void>
-
-    /**
-     * Returns the list of conditions that can be used in an NLU Trigger node
-     */
-    export function getConditions(): Condition[]
   }
 
   export namespace config {
-    export function getModuleConfig(moduleId: string): Promise<any>
-
-    /**
-     * Returns the configuration values for the specified module and bot.
-     * @param moduleId
-     * @param botId
-     * @param ignoreGlobal Enable this when you want only bot-specific configuration to be possible
-     */
-    export function getModuleConfigForBot(moduleId: string, botId: string, ignoreGlobal?: boolean): Promise<any>
-
     /**
      * Returns the configuration options of Botpress
      */
     export function getBotpressConfig(): Promise<any>
-
-    /**
-     * Merges and saves a bot's config
-     * @param botId
-     * @param partialConfig
-     * @param ignoreLock
-     */
-    export function mergeBotConfig(botId: string, partialConfig: Partial<BotConfig>, ignoreLock?: boolean): Promise<any>
   }
 
   /**
@@ -2098,23 +2040,6 @@ declare module 'botpress/sdk' {
       workspaceId: string,
       allowOverwrite?: boolean
     ): Promise<void>
-
-    /**
-     * Allows hook developers to list revisions of a bot
-     * @param botId the ID of the target bot
-     */
-    export function listBotRevisions(botId: string): Promise<string[]>
-    /**
-     * Allows hook developers to create a new revision of a bot
-     * @param botId the ID of the target bot
-     */
-    export function createBotRevision(botId: string): Promise<void>
-    /**
-     * Allows hook developers to rollback
-     * @param botId the ID of the target bot
-     * @param revisionId the target revision ID to which you want to revert the chatbot
-     */
-    export function rollbackBotToRevision(botId: string, revisionId: string): Promise<void>
   }
 
   export namespace workspaces {
@@ -2198,8 +2123,6 @@ declare module 'botpress/sdk' {
       language?: string
     ): Promise<ContentElement[]>
 
-    export function deleteContentElements(botId: string, contentElementIds: string[]): Promise<void>
-
     export function getAllContentTypes(botId: string): Promise<ContentType[]>
     /**
      * Content Types can produce multiple payloads depending on the channel and the type of message. This method can generate
@@ -2222,24 +2145,6 @@ declare module 'botpress/sdk' {
       eventDestination: IO.EventDestination
     ): Promise<object[]>
 
-    /**
-     * Updates an existing content element, or creates it if its current ID isn't defined
-     *
-     * @param botId The ID of the bot
-     * @param contentTypeId Only used when creating an element (the ID of the content type (renderer))
-     * @param formData The content of your element. May includes translations or not (see language parameter)
-     * @param contentElementId If not specified, will be treated as a new element and will be inserted
-     * @param language When language is set, only that language will be updated on this element. Otherwise, replaces all content
-     */
-    export function createOrUpdateContentElement(
-      botId: string,
-      contentTypeId: string,
-      formData: object,
-      contentElementId?: string,
-      language?: string
-    ): Promise<string>
-
-    export function saveFile(botId: string, fileName: string, content: Buffer): Promise<string>
     export function readFile(botId, fileName): Promise<Buffer>
     export function getFilePath(botId: string, fileName: string): string
 

@@ -3,12 +3,14 @@ import cluster, { Worker } from 'cluster'
 import _ from 'lodash'
 import nanoid from 'nanoid'
 import nanoidGenerate from 'nanoid/generate'
+import portFinder from 'portfinder'
 import yn from 'yn'
 
 import { setDebugScopes } from '../debug'
 import { registerActionServerMainHandler } from './action-server'
 import { registerMessagingServerMainHandler } from './messaging-server'
 import { registerNluServerMainHandler } from './nlu-server'
+import { registerRuntimeMainHandler } from './runtime-client'
 import { registerStudioMainHandler } from './studio-client'
 import { spawnWebWorker, onWebWorkerExit } from './web-worker'
 
@@ -16,7 +18,8 @@ export enum WorkerType {
   WEB = 'WEB_WORKER',
   LOCAL_ACTION_SERVER = 'LOCAL_ACTION_SERVER',
   LOCAL_STAN_SERVER = 'LOCAL_STAN_SERVER',
-  TRAINING = 'TRAINING'
+  TRAINING = 'TRAINING',
+  RUNTIME = 'RUNTIME'
 }
 
 export enum MessageType {
@@ -26,11 +29,13 @@ export enum MessageType {
   StartMessagingServer = 'START_MESSAGING_SERVER',
   RegisterProcess = 'REGISTER_PROCESS',
   BroadcastProcess = 'BROADCAST_PROCESS',
+  BroadcastProcessKilled = 'BROADCAST_PROCESS_KILLED',
   RestartServer = 'RESTART_SERVER',
-  UpdateDebugScopes = 'UPDATE_DEBUG_SCOPES'
+  UpdateDebugScopes = 'UPDATE_DEBUG_SCOPES',
+  StartRuntime = 'START_RUNTIME'
 }
 
-export type ProcType = 'web' | 'nlu' | 'action-server' | 'studio' | 'messaging'
+export type ProcType = 'web' | 'nlu' | 'action-server' | 'studio' | 'messaging' | 'runtime'
 
 interface SubProcesses {
   [type: string]: {
@@ -70,6 +75,21 @@ export const registerMsgHandler = (messageType: string, handler: (message: any, 
 
 export const processes: SubProcesses = {}
 
+export const usedPorts: number[] = []
+
+/**
+ * Ensures that no process uses the same port in case we start multiple processes quickly and one port is not correctly "blocked" for the process
+ */
+export const getUnusedPort = async (startPort: number) => {
+  if (usedPorts.includes(startPort)) {
+    return getUnusedPort(startPort + 1)
+  } else {
+    const port = await portFinder.getPortPromise({ port: startPort })
+    usedPorts.push(port)
+    return port
+  }
+}
+
 export const registerProcess = (processType: ProcType, port: number, workerId?: number) => {
   const rebootCount = processes[processType] ? processes[processType].rebootCount + 1 : 0
   processes[processType] = { port, workerId, rebootCount }
@@ -78,7 +98,13 @@ export const registerProcess = (processType: ProcType, port: number, workerId?: 
 
   // We send the new port definitions to connected workers
   for (const work in cluster.workers) {
-    cluster.workers[work]?.send({ type: MessageType.BroadcastProcess, processType, port })
+    cluster.workers[work]?.send({ type: MessageType.BroadcastProcess, processType, port, workerId })
+  }
+}
+
+const broadcastProcessKilled = (processType: ProcType, workerId?: number) => {
+  for (const work in cluster.workers) {
+    cluster.workers[work]?.send({ type: MessageType.BroadcastProcessKilled, processType, workerId })
   }
 }
 
@@ -86,12 +112,14 @@ export const onProcessExit = ({
   processType,
   code,
   signal,
+  workerId,
   exitedAfterDisconnect,
   logger,
   killOnFail,
   restartMethod
 }: ProcessDetails) => {
   debug(`[${processType}] Process exited %o`, { code, signal, exitedAfterDisconnect })
+  broadcastProcessKilled(processType, workerId)
 
   if (exitedAfterDisconnect) {
     processes[processType].rebootCount = 0
@@ -129,15 +157,18 @@ export const onProcessExit = ({
 
 export const setupMasterNode = (logger: sdk.Logger) => {
   process.SERVER_ID = process.env.SERVER_ID || nanoidGenerate('1234567890abcdefghijklmnopqrstuvwxyz', 10)
-  process.INTERNAL_PASSWORD = nanoid(75)
+  process.INTERNAL_PASSWORD = process.env.INTERNAL_PASSWORD || nanoid(75)
 
   // Fix an issue with pkg when passing custom options for v8
   cluster.setupMaster({ execArgv: process.pkg ? [] : process.execArgv })
 
-  registerActionServerMainHandler()
-  registerNluServerMainHandler(logger)
-  registerStudioMainHandler(logger)
-  registerMessagingServerMainHandler(logger)
+  if (!process.IS_RUNTIME) {
+    registerActionServerMainHandler()
+    registerNluServerMainHandler(logger)
+    registerStudioMainHandler(logger)
+    registerMessagingServerMainHandler(logger)
+    registerRuntimeMainHandler(logger)
+  }
 
   registerMsgHandler(MessageType.RestartServer, (_message, worker) => {
     logger.warn('Restarting server...')

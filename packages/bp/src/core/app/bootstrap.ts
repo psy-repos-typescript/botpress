@@ -11,7 +11,7 @@ import { ModuleLoader, ModuleResolver } from 'core/modules'
 import fs from 'fs'
 import { AppLifecycle, AppLifecycleEvents } from 'lifecycle'
 import _ from 'lodash'
-import { setupMasterNode, setupWebWorker, WorkerType } from 'orchestrator'
+import { setupMasterNode, setupWebWorker, setupRuntimeWorker, WorkerType } from 'orchestrator'
 import os from 'os'
 import { showBanner } from './banner'
 
@@ -108,6 +108,22 @@ async function prepareLocalModules(app: BotpressApp, logger: sdk.Logger) {
   await app.ghost.root().syncDatabaseFilesToDisk('modules')
 }
 
+async function startRuntime(app: BotpressApp, logger: sdk.Logger) {
+  setupRuntimeWorker()
+
+  showBanner({ title: 'Botpress Runtime', version: sdk.version, logScopeLength: 9, bannerWidth: 75, logger })
+
+  await app.botpress.start({ modules: [] }).catch(err => {
+    logger.attachError(err).error('Error starting Botpress')
+
+    if (!process.IS_FAILSAFE) {
+      process.exit(1)
+    }
+  })
+
+  logger.info(`Runtime is listening at: ${process.LOCAL_URL}`)
+}
+
 async function start() {
   const loggerProvider = createLoggerProvider()
   if (cluster.isMaster) {
@@ -124,15 +140,23 @@ async function start() {
     return
   }
 
-  if (cluster.isWorker && process.env.WORKER_TYPE !== WorkerType.WEB) {
+  if (
+    cluster.isWorker &&
+    process.env.WORKER_TYPE !== WorkerType.WEB &&
+    process.env.WORKER_TYPE !== WorkerType.RUNTIME
+  ) {
     return
   }
-
-  setupWebWorker()
 
   await setupEnv(app)
 
   const logger = await getLogger(app.logger, 'Launcher')
+
+  if (process.IS_RUNTIME) {
+    return startRuntime(app, logger)
+  }
+
+  setupWebWorker()
 
   await prepareLocalModules(app, logger)
 

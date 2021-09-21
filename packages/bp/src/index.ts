@@ -48,7 +48,10 @@ if (process.env.APP_DATA_PATH) {
 process.IS_FAILSAFE = yn(process.env.BP_FAILSAFE)
 process.BOTPRESS_EVENTS = new EventEmitter()
 process.BOTPRESS_EVENTS.setMaxListeners(1000)
-global.BOTPRESS_CORE_EVENT = (event, args) => process.BOTPRESS_EVENTS.emit(event, args)
+global.BOTPRESS_CORE_EVENT = (event, args) => {
+  console.log(event, args)
+  process.BOTPRESS_EVENTS.emit(event, args)
+}
 
 process.LOADED_MODULES = {}
 process.PROJECT_LOCATION = process.pkg
@@ -125,6 +128,8 @@ try {
         }
       },
       argv => {
+        process.RUNTIME_COUNT = process.env.RUNTIME_COUNT !== undefined ? Number(process.env.RUNTIME_COUNT) : 0
+        process.IS_RUNTIME = process.env.IS_RUNTIME !== undefined ? yn(process.env.IS_RUNTIME) : false
         process.IS_PRODUCTION = argv.production || yn(process.env.BP_PRODUCTION) || yn(process.env.CLUSTER_ENABLED)
 
         process.AUTO_MIGRATE =

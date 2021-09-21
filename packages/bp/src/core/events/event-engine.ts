@@ -6,6 +6,7 @@ import { TimedPerfCounter } from 'core/misc/timed-perf'
 import { inject, injectable, tagged } from 'inversify'
 import joi from 'joi'
 import _ from 'lodash'
+import { coreActions, runtimeActions } from 'orchestrator'
 import { VError } from 'verror'
 import yn from 'yn'
 
@@ -130,6 +131,10 @@ export class EventEngine {
 
       addStepToEvent(event, StepScopes.EndProcessing)
       this.eventCollector.storeEvent(event)
+
+      if (process.IS_RUNTIME) {
+        await coreActions.sendOutgoing(event)
+      }
     })
 
     this.setupPerformanceHooks()
@@ -188,13 +193,18 @@ export class EventEngine {
 
   async sendEvent(event: sdk.IO.Event): Promise<void> {
     this.validateEvent(event)
+    const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
+
+    if (!process.IS_RUNTIME && process.RUNTIME_COUNT && isIncoming(event)) {
+      await runtimeActions.sendIncoming(event)
+      return
+    }
 
     if (event.debugger) {
       addStepToEvent(event, StepScopes.Received)
       this.eventCollector.storeEvent(event)
     }
 
-    const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
     if (isIncoming(event)) {
       debugIncoming.forBot(event.botId, 'send ', event)
       incrementMetric('eventsIn.count')

@@ -1,5 +1,5 @@
 import { Logger } from 'botpress/sdk'
-import { GhostService } from 'core/bpfs'
+import { GhostService, ScopedGhostService } from 'core/bpfs'
 import crypto from 'crypto'
 import { WrapErrorsWith } from 'errors'
 import fse from 'fs-extra'
@@ -89,6 +89,14 @@ export class ModuleResourceLoader {
     await this._loadModuleResources()
   }
 
+  private async forceRename(ghost: ScopedGhostService, rootFolder: string, fromName: string, toName: string) {
+    if (await ghost.fileExists(rootFolder, toName)) {
+      await ghost.deleteFile(rootFolder, toName)
+    }
+
+    await ghost.renameFile(rootFolder, fromName, toName)
+  }
+
   async enableResources() {
     const ghost = this.ghost.global()
 
@@ -97,7 +105,7 @@ export class ModuleResourceLoader {
       await Promise.all(
         files
           .filter(name => name.startsWith(DISABLED_PREFIX))
-          .map(file => ghost.renameFile(path, file, file.replace(DISABLED_PREFIX, '')))
+          .map(file => this.forceRename(ghost, path, file, file.replace(DISABLED_PREFIX, '')))
       )
     }
 
@@ -106,7 +114,12 @@ export class ModuleResourceLoader {
       hooks
         .filter(f => this.hookMatcher.test(f) && path.basename(f).startsWith(DISABLED_PREFIX))
         .map(f =>
-          ghost.renameFile(`hooks/${path.dirname(f)}`, path.basename(f), path.basename(f).replace(DISABLED_PREFIX, ''))
+          this.forceRename(
+            ghost,
+            `hooks/${path.dirname(f)}`,
+            path.basename(f),
+            path.basename(f).replace(DISABLED_PREFIX, '')
+          )
         )
     )
   }
@@ -116,14 +129,16 @@ export class ModuleResourceLoader {
 
     for (const path of this.globalPaths) {
       const files = await ghost.directoryListing(path)
-      await Promise.all(files.map(file => ghost.renameFile(path, file, DISABLED_PREFIX + file)))
+      await Promise.all(files.map(file => this.forceRename(ghost, path, file, DISABLED_PREFIX + file)))
     }
 
     const hooks = await ghost.directoryListing('/hooks')
     await Promise.all(
       hooks
         .filter(file => this.hookMatcher.test(file))
-        .map(f => ghost.renameFile(`hooks/${path.dirname(f)}`, path.basename(f), DISABLED_PREFIX + path.basename(f)))
+        .map(f =>
+          this.forceRename(ghost, `hooks/${path.dirname(f)}`, path.basename(f), DISABLED_PREFIX + path.basename(f))
+        )
     )
   }
 
