@@ -168,7 +168,7 @@ export class PersistedConsoleLogger implements Logger {
     const timeFormat = 'L HH:mm:ss.SSS'
     const time = moment().format(timeFormat)
 
-    const prefix = process.IS_RUNTIME ? `[Runtime-${process.env.RUNTIME_ID}] ${this.name}` : this.name
+    const prefix = process.IS_RUNTIME ? `[Runtime-${process.env.RUNTIME_ID || '0'}] ${this.name}` : this.name
     const displayName = process.env.INDENT_LOGS ? this.name.substr(0, 15).padEnd(15, ' ') : prefix
     const newLineIndent = `${chalk.dim(' '.repeat(`${timeFormat} ${displayName}`.length))} `
     let indentedMessage =

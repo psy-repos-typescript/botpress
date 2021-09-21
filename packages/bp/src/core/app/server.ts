@@ -370,8 +370,9 @@ export class HTTPServer {
 
       this.adminRouter.setupRoutes(this.app)
       this.messagingRouter.setupRoutes()
-      await this.botsRouter.setupRoutes(this.app)
     }
+
+    await this.botsRouter.setupRoutes(this.app)
 
     this.internalRouter.setupRoutes()
     this.app.use('/api/internal', this.internalRouter.router)
