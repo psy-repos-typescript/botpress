@@ -10,27 +10,27 @@ The runtime has the following properties:
 
 These methods are not available when running as a runtime.
 
-http.createShortLink
-http.deleteShortLink
-http.createRouterForBot
-http.deleteRouterForBot
-events.registerMiddleware
-events.removeMiddleware
-dialog.getConditions
-config.getModuleConfig
-config.getModuleConfigForBot
-config.mergeBotConfig
-bots.exportBot
-bots.importBot
-bots.listBotRevisions
-bots.createBotRevision
-bots.rollbackBotToRevision
-cms.deleteContentElements
-cms.createOrUpdateContentElement
-cms.saveFile
-ghost.[forBot|forGlobal|forBots].upsertFile
-ghost.[forBot|forGlobal|forBots].renameFile
-ghost.[forBot|forGlobal|forBots].deleteFile
+- http.createShortLink
+- http.deleteShortLink
+- http.createRouterForBot
+- http.deleteRouterForBot
+- events.registerMiddleware
+- events.removeMiddleware
+- dialog.getConditions
+- config.getModuleConfig
+- config.getModuleConfigForBot
+- config.mergeBotConfig
+- bots.exportBot
+- bots.importBot
+- bots.listBotRevisions
+- bots.createBotRevision
+- bots.rollbackBotToRevision
+- cms.deleteContentElements
+- cms.createOrUpdateContentElement
+- cms.saveFile
+- ghost.[forBot|forGlobal|forBots].upsertFile
+- ghost.[forBot|forGlobal|forBots].renameFile
+- ghost.[forBot|forGlobal|forBots].deleteFile
 
 ### Start BP with multiple runtimes
 
