@@ -1,3 +1,4 @@
+import { getRuntime } from '@botpress/runtime'
 import { Logger } from 'botpress/sdk'
 import { StandardError } from 'common/http'
 import { HTTPServer } from 'core/app/server'
@@ -60,13 +61,15 @@ export class ConverseRouter extends CustomRouter {
           return res.status(403).send('Unauthenticated converse API can only return "responses"')
         }
 
-        const rawOutput = await this.converseService.sendMessage(
+        const runtime = await getRuntime()
+        const rawOutput = await runtime.sendConverseMessage(
           botId,
           userId,
           _.omit(req.body, ['includedContexts']),
           req.credentials,
           req.body.includedContexts || ['global']
         )
+
         const formatedOutput = this.prepareResponse(rawOutput, params)
 
         return res.json(formatedOutput)

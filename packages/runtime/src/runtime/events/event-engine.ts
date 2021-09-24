@@ -1,15 +1,14 @@
-import { getRuntime } from '@botpress/runtime'
 import * as sdk from 'botpress/sdk'
-import { TYPES } from 'core/app/types'
-import { WellKnownFlags } from 'core/dialog'
-import { incrementMetric } from 'core/health'
-import { TimedPerfCounter } from 'core/misc/timed-perf'
 import { inject, injectable, tagged } from 'inversify'
 import joi from 'joi'
 import _ from 'lodash'
-import { coreActions, runtimeActions } from 'orchestrator'
+import { TYPES } from 'runtime/app/types'
+import { WellKnownFlags } from 'runtime/dialog'
+import { incrementMetric } from 'runtime/health'
+import { TimedPerfCounter } from 'runtime/misc/timed-perf'
 import { VError } from 'verror'
 import yn from 'yn'
+
 import { EventCollector } from './event-collector'
 import { Event } from './event-sdk-impl'
 import { MiddlewareChain } from './middleware-chain'
@@ -112,7 +111,7 @@ export class EventEngine {
     this.incomingQueue.subscribe(async (event: sdk.IO.IncomingEvent) => {
       await this._infoMiddleware(event)
       this.onBeforeIncomingMiddleware && (await this.onBeforeIncomingMiddleware(event))
-      const { incoming } = await this.getMiddlewareChains()
+      const { incoming } = await this.getBotMiddlewareChains(event.botId)
       await incoming.run(event)
       this.onAfterIncomingMiddleware && (await this.onAfterIncomingMiddleware(event))
       this._incomingPerf.record()
@@ -120,23 +119,15 @@ export class EventEngine {
 
     this.outgoingQueue.subscribe(async (event: sdk.IO.OutgoingEvent) => {
       this.onBeforeOutgoingMiddleware && (await this.onBeforeOutgoingMiddleware(event))
-      const { outgoing } = await this.getMiddlewareChains()
+      const { outgoing } = await this.getBotMiddlewareChains(event.botId)
       await outgoing.run(event)
       this._outgoingPerf.record()
 
       addStepToEvent(event, StepScopes.EndProcessing)
       this.eventCollector.storeEvent(event)
-
-      if (process.IS_RUNTIME) {
-        await coreActions.sendOutgoing(event)
-      }
     })
 
     this.setupPerformanceHooks()
-  }
-
-  public getMiddlewares() {
-    return { incoming: this.incomingMiddleware, outgoing: this.outgoingMiddleware }
   }
 
   /**
@@ -191,35 +182,24 @@ export class EventEngine {
   }
 
   async sendEvent(event: sdk.IO.Event): Promise<void> {
-    const runtime = await getRuntime()
-    return runtime.sendEvent(event)
-    // this.validateEvent(event)
+    this.validateEvent(event)
 
-    // if (event.debugger) {
-    //   addStepToEvent(event, StepScopes.Received)
-    //   this.eventCollector.storeEvent(event)
-    // }
+    if (event.debugger) {
+      addStepToEvent(event, StepScopes.Received)
+      this.eventCollector.storeEvent(event)
+    }
 
-    // const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
+    const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
 
-    // // if (!process.IS_RUNTIME && process.RUNTIME_COUNT && isIncoming(event)) {
-    // //   await runtimeActions.sendIncoming(event)
-    // //   return
-    // // }
-
-    // if (isIncoming(event)) {
-    //   if (!process.IS_RUNTIME && process.RUNTIME_COUNT) {
-    //     return runtimeActions.sendIncoming(event)
-    //   }
-
-    //   debugIncoming.forBot(event.botId, 'send ', event)
-    //   incrementMetric('eventsIn.count')
-    //   await this.incomingQueue.enqueue(event, 1, false)
-    // } else {
-    //   debugOutgoing.forBot(event.botId, 'send ', event)
-    //   incrementMetric('eventsOut.count')
-    //   await this.outgoingQueue.enqueue(event, 1, false)
-    // }
+    if (isIncoming(event)) {
+      debugIncoming.forBot(event.botId, 'send ', event)
+      incrementMetric('eventsIn.count')
+      await this.incomingQueue.enqueue(event, 1, false)
+    } else {
+      debugOutgoing.forBot(event.botId, 'send ', event)
+      incrementMetric('eventsOut.count')
+      await this.outgoingQueue.enqueue(event, 1, false)
+    }
   }
 
   async replyToEvent(eventDestination: sdk.IO.EventDestination, payloads: any[], incomingEventId?: string) {
@@ -251,7 +231,7 @@ export class EventEngine {
     return this.outgoingQueue.isQueueLockedForJob(event)
   }
 
-  private async getMiddlewareChains() {
+  private async getBotMiddlewareChains(botId: string) {
     const incoming = new MiddlewareChain()
     const outgoing = new MiddlewareChain()
 

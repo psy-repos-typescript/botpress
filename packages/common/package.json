@@ -1,0 +1,36 @@
+{
+  "name": "@botpress/common",
+  "version": "1.0.0",
+  "description": "The world's most powerful conversational engine",
+  "engines": {
+    "node": "^12"
+  },
+  "main": "lib/index.js",
+  "repository": "https://github.com/botpress/botpress.git",
+  "author": "Botpress, Inc.",
+  "license": "AGPL-3.0",
+  "private": true,
+  "scripts": {
+    "build": "yarn tsc",
+    "watch": "yarn tsc --watch"
+  },
+  "dependencies": {
+    "bluebird": "3.5.3",
+    "bluebird-global": "^1.0.1",
+    "chalk": "^2.4.2",
+    "fs-extra": "^9.1.0",
+    "unzipper": "^0.10.3",
+    "glob": "^7.1.6",
+    "mkdirp": "^1.0.4",
+    "globrex": "^0.1.2"
+  },
+  "resolutions": {
+    "fstream": ">=1.0.12",
+    "lodash": ">=4.17.21"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {
+    "ioredis": "^4.14.1",
+    "sqlite3": "4.2.0"
+  }
+}
