@@ -108,33 +108,6 @@ async function prepareLocalModules(app: BotpressApp, logger: sdk.Logger) {
   await app.ghost.root().syncDatabaseFilesToDisk('modules')
 }
 
-async function startRuntime(app: BotpressApp, logger: sdk.Logger) {
-  setupRuntimeWorker()
-
-  // If there is no CORE_PORT, then we must disable all modules (except builtins one)
-  if (!process.env.CORE_PORT) {
-    const globalConfig = await app.config.getBotpressConfig()
-    const modules = _.uniqBy(globalConfig.modules, x => x.location).map(x => x.location.replace('MODULES_ROOT/', ''))
-
-    for (const mod of modules) {
-      const mrl = new ModuleResourceLoader(logger, mod, app.ghost)
-      await mrl.disableResources()
-    }
-  }
-
-  showBanner({ title: 'Botpress Runtime', version: sdk.version, logScopeLength: 9, bannerWidth: 75, logger })
-
-  await app.botpress.start({ modules: [] }).catch(err => {
-    logger.attachError(err).error('Error starting Botpress')
-
-    if (!process.IS_FAILSAFE) {
-      process.exit(1)
-    }
-  })
-
-  logger.info(`Runtime is listening at: ${process.LOCAL_URL}`)
-}
-
 async function start() {
   const loggerProvider = createLoggerProvider()
   if (cluster.isMaster) {
@@ -151,21 +124,13 @@ async function start() {
     return
   }
 
-  if (
-    cluster.isWorker &&
-    process.env.WORKER_TYPE !== WorkerType.WEB &&
-    process.env.WORKER_TYPE !== WorkerType.RUNTIME
-  ) {
+  if (cluster.isWorker && process.env.WORKER_TYPE !== WorkerType.WEB) {
     return
   }
 
   await setupEnv(app)
 
   const logger = await getLogger(app.logger, 'Launcher')
-
-  if (process.IS_RUNTIME) {
-    return startRuntime(app, logger)
-  }
 
   setupWebWorker()
 

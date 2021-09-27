@@ -116,12 +116,6 @@ try {
           default: false,
           type: 'boolean'
         },
-        runtime: {
-          alias: 'r',
-          description: 'Start as a simple runtime',
-          default: false,
-          type: 'boolean'
-        },
         autoMigrate: {
           description:
             'When this flag is set, Botpress will automatically migrate your content and configuration files when upgrading',
@@ -131,7 +125,6 @@ try {
       },
       argv => {
         process.RUNTIME_COUNT = process.env.RUNTIME_COUNT !== undefined ? Number(process.env.RUNTIME_COUNT) : 0
-        process.IS_RUNTIME = process.env.IS_RUNTIME !== undefined ? yn(process.env.IS_RUNTIME) : yn(argv.runtime)
         process.IS_PRODUCTION = argv.production || yn(process.env.BP_PRODUCTION) || yn(process.env.CLUSTER_ENABLED)
 
         process.AUTO_MIGRATE =

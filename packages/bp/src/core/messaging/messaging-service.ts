@@ -45,9 +45,6 @@ export class MessagingService {
   }
 
   async loadMessagingForBot(botId: string) {
-    if (process.IS_RUNTIME) {
-      return
-    }
     await AppLifecycle.waitFor(AppLifecycleEvents.STUDIO_READY)
 
     const config = await this.configProvider.getBotConfig(botId)

@@ -362,10 +362,8 @@ export class HTTPServer {
       res.send(process.BOTPRESS_VERSION)
     })
 
-    if (!process.IS_RUNTIME) {
-      this.setupUILite(this.app)
-      this.adminRouter.setupRoutes(this.app)
-    }
+    this.setupUILite(this.app)
+    this.adminRouter.setupRoutes(this.app)
 
     this.messagingRouter.setupRoutes()
     this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
@@ -375,15 +373,13 @@ export class HTTPServer {
 
     await this.botsRouter.setupRoutes(this.app)
 
-    if (!process.IS_RUNTIME) {
-      this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
+    this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
 
-      this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
-      this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
-      this.app.use(`${BASE_API_PATH}/telemetry`, this.telemetryRouter.router)
-      this.app.use(`${BASE_API_PATH}/media`, this.mediaRouter.router)
-      this.app.use('/s', this.shortLinksRouter.router)
-    }
+    this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
+    this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
+    this.app.use(`${BASE_API_PATH}/telemetry`, this.telemetryRouter.router)
+    this.app.use(`${BASE_API_PATH}/media`, this.mediaRouter.router)
+    this.app.use('/s', this.shortLinksRouter.router)
 
     this.app.use((err, _req, _res, next) => {
       if (err instanceof UnlicensedError) {
@@ -420,25 +416,16 @@ export class HTTPServer {
     process.EXTERNAL_URL = process.env.EXTERNAL_URL || config.externalUrl || `http://${process.HOST}:${process.PORT}`
     process.LOCAL_URL = `http://${process.HOST}:${process.PORT}${process.ROOT_PATH}`
 
-    if (process.IS_RUNTIME) {
-      process.send!({
-        type: MessageType.RegisterProcess,
-        processType: 'runtime',
-        port: process.PORT,
-        runtimeId: process.env.RUNTIME_ID
-      })
-    } else {
-      process.send!({ type: MessageType.RegisterProcess, processType: 'web', port: process.PORT })
+    process.send!({ type: MessageType.RegisterProcess, processType: 'web', port: process.PORT })
 
-      if (process.PORT !== config.port) {
-        this.logger.warn(`Configured port ${config.port} is already in use. Using next port available: ${process.PORT}`)
-      }
+    if (process.PORT !== config.port) {
+      this.logger.warn(`Configured port ${config.port} is already in use. Using next port available: ${process.PORT}`)
+    }
 
-      if (!process.env.EXTERNAL_URL && !config.externalUrl) {
-        this.logger.warn(
-          `External URL is not configured. Using default value of ${process.EXTERNAL_URL}. Some features may not work properly`
-        )
-      }
+    if (!process.env.EXTERNAL_URL && !config.externalUrl) {
+      this.logger.warn(
+        `External URL is not configured. Using default value of ${process.EXTERNAL_URL}. Some features may not work properly`
+      )
     }
 
     const hostname = config.host === 'localhost' ? undefined : config.host
@@ -524,10 +511,7 @@ export class HTTPServer {
   }
 
   async getAxiosConfigForBot(botId: string, options?: AxiosOptions): Promise<AxiosBotConfig> {
-    let basePath = options?.localUrl ? process.LOCAL_URL : process.EXTERNAL_URL
-    if (process.IS_RUNTIME && options?.localUrl) {
-      basePath = `http://localhost:${process.env.CORE_PORT}`
-    }
+    const basePath = options?.localUrl ? process.LOCAL_URL : process.EXTERNAL_URL
 
     const serverToken = generateUserToken({
       email: SERVER_USER,

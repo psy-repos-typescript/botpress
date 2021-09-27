@@ -62,7 +62,6 @@ container // TODO Implement this
   .bind<BotpressAPIProvider>(TYPES.BotpressAPIProvider)
   .to(BotpressAPIProvider)
   .inSingletonScope()
-  .when(() => !process.IS_RUNTIME)
 
 container
   .bind<ModuleLoader>(TYPES.ModuleLoader)

@@ -87,6 +87,18 @@ export class Botpress {
     }
   }
 
+  private async disableModules() {
+    // If there is no CORE_PORT, then we must disable all modules (except builtins one)
+    // if (!process.env.CORE_PORT) {
+    //   const globalConfig = await app.config.getBotpressConfig()
+    //   const modules = _.uniqBy(globalConfig.modules, x => x.location).map(x => x.location.replace('MODULES_ROOT/', ''))
+    //   for (const mod of modules) {
+    //     const mrl = new ModuleResourceLoader(logger, mod, app.ghost)
+    //     await mrl.disableResources()
+    //   }
+    // }
+  }
+
   private async initialize(options: RuntimeSetup) {
     if (!options) {
       this.config = await this.configProvider.getRuntimeConfig()

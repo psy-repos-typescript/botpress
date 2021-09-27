@@ -104,10 +104,8 @@ export class Botpress {
 
     this.config = await this.configProvider.getBotpressConfig()
 
-    if (!process.IS_RUNTIME) {
-      this.trackStart()
-      this.trackHeartbeat()
-    }
+    this.trackStart()
+    this.trackHeartbeat()
 
     setDebugScopes(process.core_env.DEBUG || (process.IS_PRODUCTION ? '' : 'bp:dialog'))
 
@@ -116,28 +114,18 @@ export class Botpress {
     this.displayRedisChannelPrefix()
     await this.restoreDebugScope()
     await this.checkJwtSecret()
-
-    if (!process.IS_RUNTIME) {
-      await this.loadModules(options.modules)
-      await this.migrationService.initialize()
-      await this.cleanDisabledModules()
-    }
-
+    await this.loadModules(options.modules)
+    await this.migrationService.initialize()
+    await this.cleanDisabledModules()
     await this.initializeServices()
-
-    if (!process.IS_RUNTIME) {
-      await this.checkEditionRequirements()
-      await this.deployAssets()
-      await this.maybeStartLocalSTAN()
-      await this.startRealtime()
-    }
-
+    await this.checkEditionRequirements()
+    await this.deployAssets()
+    await this.maybeStartLocalSTAN()
+    await this.startRealtime()
     await this.startServer()
 
-    if (!process.IS_RUNTIME) {
-      await this.maybeStartLocalMessagingServer()
-      await this.maybeStartLocalActionServer()
-    }
+    await this.maybeStartLocalMessagingServer()
+    await this.maybeStartLocalActionServer()
 
     const bots = await this.discoverBots()
 
@@ -175,7 +163,8 @@ export class Botpress {
         actions: await createForAction()
       },
       middlewares: await this.eventEngine.getMiddlewares(),
-      bots
+      bots,
+      logStreamEmitter: undefined
     }
 
     await getRuntime(opt)
@@ -371,9 +360,7 @@ export class Botpress {
 
   @WrapErrorsWith('Error while discovering bots')
   async discoverBots(): Promise<string[]> {
-    if (!process.IS_RUNTIME) {
-      await AppLifecycle.waitFor(AppLifecycleEvents.MODULES_READY)
-    }
+    await AppLifecycle.waitFor(AppLifecycleEvents.MODULES_READY)
 
     const botsRef = await this.workspaceService.getBotRefs()
     const botsIds = await this.botService.getBotsIds()
