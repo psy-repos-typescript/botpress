@@ -1,25 +1,21 @@
 import { extractArchive } from '@botpress/common/lib/archive'
 import { BotConfig, Logger } from 'botpress/sdk'
-import cluster from 'cluster'
 import { BotHealth, ServerHealth } from 'common/typings'
 import { inject, injectable, postConstruct, tagged } from 'inversify'
 import _ from 'lodash'
 import ms from 'ms'
 import os from 'os'
 import path from 'path'
+import { createForGlobalHooks } from 'runtime/app/api'
 import { TYPES } from 'runtime/app/types'
 import { GhostService } from 'runtime/bpfs'
 import { CMSService } from 'runtime/cms'
 import { ConfigProvider } from 'runtime/config'
 import { JobService, makeRedisKey } from 'runtime/distributed'
-import { HookService } from 'runtime/user-code'
+import { Hooks, HookService } from 'runtime/user-code'
 import { ComponentService } from './component-service'
 
 const BOT_CONFIG_FILENAME = 'bot.config.json'
-const REVISIONS_DIR = './revisions'
-const BOT_ID_PLACEHOLDER = '/bots/BOT_ID_PLACEHOLDER/'
-const REV_SPLIT_CHAR = '++'
-const MAX_REV = 10
 
 const STATUS_REFRESH_INTERVAL = ms('15s')
 const STATUS_EXPIRY = ms('20s')
@@ -30,14 +26,10 @@ const debug = DEBUG('services:bots')
 
 @injectable()
 export class BotService {
-  public mountBot: Function = this._localMount
-  public unmountBot: Function = this._localUnmount
-  public syncLibs: Function = this._localSyncLibs
-
   private _botIds: string[] | undefined
   private static _mountedBots: Map<string, boolean> = new Map()
   private static _botHealth: { [botId: string]: BotHealth } = {}
-  //private _updateBotHealthDebounce = _.debounce(this._updateBotHealth, 500)
+  private _updateBotHealthDebounce = _.debounce(this._updateBotHealth, 500)
   private componentService: ComponentService
 
   constructor(
@@ -56,13 +48,11 @@ export class BotService {
 
   @postConstruct()
   async init() {
-    this.mountBot = await this.jobService.broadcast<void>(this._localMount.bind(this))
-    this.unmountBot = await this.jobService.broadcast<void>(this._localUnmount.bind(this))
-    this.syncLibs = await this.jobService.broadcast<void>(this._localSyncLibs.bind(this))
+    setInterval(() => this._updateBotHealthDebounce(), STATUS_REFRESH_INTERVAL)
+  }
 
-    if (!cluster.isMaster) {
-      //  setInterval(() => this._updateBotHealthDebounce(), STATUS_REFRESH_INTERVAL)
-    }
+  getBotWorkspaceId(botId: string) {
+    return 'default'
   }
 
   async findBotById(botId: string): Promise<BotConfig | undefined> {
@@ -155,8 +145,7 @@ export class BotService {
     await this.ghostService.forBot(botId).syncDatabaseFilesToDisk('hooks')
   }
 
-  // Do not use directly use the public version instead due to broadcasting
-  private async _localMount(botId: string): Promise<boolean> {
+  public async mountBot(botId: string): Promise<boolean> {
     const startTime = Date.now()
     if (this.isBotMounted(botId)) {
       return true
@@ -183,9 +172,9 @@ export class BotService {
       await this._extractLibsToDisk(botId)
       await this._extractBotNodeModules(botId)
 
-      // PROVIDE SDK
-      // const api = await createForGlobalHooks()
-      // await this.hookService.executeHook(new Hooks.AfterBotMount(api, botId))
+      const api = await createForGlobalHooks()
+      await this.hookService.executeHook(new Hooks.AfterBotMount(api, botId))
+
       BotService._mountedBots.set(botId, true)
 
       this._invalidateBotIds()
@@ -200,13 +189,13 @@ export class BotService {
 
       return false
     } finally {
-      // await this._updateBotHealthDebounce()
+      await this._updateBotHealthDebounce()
       debug.forBot(botId, `Mount took ${Date.now() - startTime}ms`)
     }
   }
 
   // Do not use directly use the public version instead due to broadcasting
-  private async _localUnmount(botId: string) {
+  public async unmountBot(botId: string) {
     const startTime = Date.now()
     if (!this.isBotMounted(botId)) {
       this._invalidateBotIds()
@@ -215,14 +204,13 @@ export class BotService {
 
     await this.cms.clearElementsFromCache(botId)
 
-    // const api = await createForGlobalHooks()
-    // await this.hookService.executeHook(new Hooks.AfterBotUnmount(api, botId))
+    const api = await createForGlobalHooks()
+    await this.hookService.executeHook(new Hooks.AfterBotUnmount(api, botId))
 
     BotService._mountedBots.set(botId, false)
-
     BotService.setBotStatus(botId, 'disabled')
 
-    // await this._updateBotHealthDebounce()
+    await this._updateBotHealthDebounce()
     this._invalidateBotIds()
     debug.forBot(botId, `Unmount took ${Date.now() - startTime}ms`)
 
@@ -238,6 +226,20 @@ export class BotService {
     const bots: string[] = []
     BotService._mountedBots.forEach((isMounted, bot) => isMounted && bots.push(bot))
     return bots
+  }
+
+  private async _updateBotHealth(): Promise<void> {
+    const botIds = await this.getBotsIds()
+
+    Object.keys(BotService._botHealth)
+      .filter(x => !botIds.includes(x))
+      .forEach(id => delete BotService._botHealth[id])
+
+    const redis = this.jobService.getRedisClient()
+    if (redis) {
+      const data = JSON.stringify({ serverId: process.SERVER_ID, hostname: os.hostname(), bots: BotService._botHealth })
+      await redis.set(getBotStatusKey(process.SERVER_ID), data, 'PX', STATUS_EXPIRY)
+    }
   }
 
   public async getBotHealth(): Promise<ServerHealth[]> {

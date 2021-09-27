@@ -3,10 +3,9 @@ import LicensingService from 'common/licensing-service'
 import { BotMonitoringService, BotService } from 'core/bots'
 import { GhostContainerModule } from 'core/bpfs'
 import { CMSService, RenderService } from 'core/cms'
-import { ConverseService } from 'core/converse'
 import { DialogContainerModule, SkillService } from 'core/dialog'
 import { CEJobService, JobService } from 'core/distributed'
-import { EventEngine, Queue, MemoryQueue } from 'core/events'
+import { EventEngine } from 'core/events'
 import { CEMonitoringService, MonitoringService, AlertingService, CEAlertingService } from 'core/health'
 import { KeyValueStore } from 'core/kvs'
 import { LogsJanitor } from 'core/logger'
@@ -73,14 +72,6 @@ const ServicesContainerModule = new ContainerModule((bind: interfaces.Bind) => {
     .inSingletonScope()
     .when(() => !process.IS_PRO_ENABLED)
 
-  bind<Queue<IO.IncomingEvent>>(TYPES.IncomingQueue).toDynamicValue((context: interfaces.Context) => {
-    return new MemoryQueue('Incoming', context.container.getTagged(TYPES.Logger, 'name', 'IQueue'))
-  })
-
-  bind<Queue<IO.OutgoingEvent>>(TYPES.OutgoingQueue).toDynamicValue((context: interfaces.Context) => {
-    return new MemoryQueue('Outgoing', context.container.getTagged(TYPES.Logger, 'name', 'OQueue'))
-  })
-
   bind<HookService>(TYPES.HookService)
     .to(HookService)
     .inSingletonScope()
@@ -111,10 +102,6 @@ const ServicesContainerModule = new ContainerModule((bind: interfaces.Bind) => {
 
   bind<SkillService>(TYPES.SkillService)
     .to(SkillService)
-    .inSingletonScope()
-
-  bind<ConverseService>(TYPES.ConverseService)
-    .to(ConverseService)
     .inSingletonScope()
 
   bind<BotService>(TYPES.BotService)

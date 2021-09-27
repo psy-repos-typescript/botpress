@@ -13,7 +13,6 @@ import { BotService, BotsRouter } from 'core/bots'
 import { GhostService, MemoryObjectCache } from 'core/bpfs'
 import { CMSService } from 'core/cms'
 import { ExternalAuthConfig, ConfigProvider } from 'core/config'
-import { ConverseService } from 'core/converse'
 import { FlowService, SkillService } from 'core/dialog'
 import { JobService } from 'core/distributed'
 import { EventEngine, EventRepository } from 'core/events'
@@ -114,7 +113,6 @@ export class HTTPServer {
     @inject(TYPES.GhostService) private ghostService: GhostService,
     @inject(TYPES.HintsService) hintsService: HintsService,
     @inject(TYPES.LicensingService) licenseService: LicensingService,
-    @inject(TYPES.ConverseService) converseService: ConverseService,
     @inject(TYPES.WorkspaceService) private workspaceService: WorkspaceService,
     @inject(TYPES.BotService) private botService: BotService,
     @inject(TYPES.AuthStrategies) authStrategies: AuthStrategies,
@@ -180,7 +178,6 @@ export class HTTPServer {
       authService,
       workspaceService,
       nluService,
-      converseService,
       this.logger,
       mediaServiceProvider,
       eventRepo,

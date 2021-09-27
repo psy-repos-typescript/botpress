@@ -3,7 +3,8 @@ import { Dictionary } from 'lodash'
 
 export enum AppLifecycleEvents {
   CONFIGURATION_LOADED = 'CONFIGURATION_LOADED',
-  BOTPRESS_READY = 'BOTPRESS_READY'
+  BOTPRESS_READY = 'BOTPRESS_READY',
+  HTTP_SERVER_READY = 'HTTP_SERVER_READY'
 }
 
 interface CacheEntry {

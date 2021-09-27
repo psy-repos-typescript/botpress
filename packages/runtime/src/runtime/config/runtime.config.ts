@@ -66,6 +66,93 @@ export interface LogsConfig {
  */
 
 export interface RuntimeConfig {
+  httpServer?: {
+    /**
+     * @default localhost
+     */
+    host: string
+    /**
+     * @default 3000
+     */
+    port: number
+    /**
+     * There are three external URLs that Botpress calls: https://license.botpress.io, https://duckling.botpress.io and https://lang-01.botpress.io
+     * If you are behind a corporate proxy, you can configure it below.
+     * It is also possible to self-host Duckling, please check the documentation
+     *
+     * @example http://username:password@hostname:port
+     */
+    proxy?: string
+    /**
+     * @default 0
+     */
+    backlog: number
+    /**
+     * @default 10mb
+     */
+    bodyLimit: string | number
+    /**
+     * CORS policy for the server. You can provide other configuration parameters
+     * listed on this page: https://expressjs.com/en/resources/middleware/cors.html
+     */
+    cors: {
+      /**
+       * @default true
+       */
+      enabled?: boolean
+      origin?: string
+      credentials?: boolean
+    }
+    /**
+     * Represents the complete base URL exposed externally by your bot. This is useful if you configure the bot
+     * locally and use NGINX as a reverse proxy to handle HTTPS. It should include the protocol and no trailing slash.
+     * If unset, it will be constructed from the real host/port
+     * @example https://botpress.com
+     * @default
+     */
+    externalUrl: string
+    session: {
+      /**
+       * @default false
+       */
+      enabled: boolean
+      /**
+       * Time from Date.now() for expiry
+       * Defaults to one hour
+       * @default 1h
+       */
+      maxAge: string
+    }
+    /**
+     * Configure the priority for establishing socket connections for webchat and studio users.
+     * If the first method is not supported, it will fallback on the second.
+     * If the first is supported but it fails with an error, it will not fallback.
+     * @default ["websocket","polling"]
+     */
+    socketTransports: string[]
+    rateLimit: {
+      /**
+       * * Security option to rate limit potential attacker trying to brute force something
+       * @default false
+       */
+      enabled: boolean
+      /**
+       * Time window to compute rate limiting
+       * @default 30s
+       */
+      limitWindow: string
+      /**
+       * * Maximum number of request in limit window to ban an IP. Keep in mind that this includes admin, studio and chat request so don't put it too low
+       * @default 600
+       */
+      limit: number
+    }
+    /**
+     * Adds default headers to the server's responses
+     * @default {"X-Powered-By":"Botpress"}
+     */
+    headers: { [name: string]: string }
+  }
   converse: ConverseConfig
   dialog: DialogConfig
   logs: LogsConfig

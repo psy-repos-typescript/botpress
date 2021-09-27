@@ -6,8 +6,6 @@ import nanoid from 'nanoid'
 import path from 'path'
 import { GhostService } from 'runtime/bpfs'
 import { ConfigProvider } from 'runtime/config'
-import { JobService } from 'runtime/distributed'
-import { EventEngine } from 'runtime/events'
 import { LoggerProvider } from 'runtime/logger'
 import { TYPES } from 'runtime/types'
 import { VError } from 'verror'
@@ -37,8 +35,6 @@ const extractPayload = (type: string, data) => {
 
 @injectable()
 export class CMSService implements IDisposeOnExit {
-  broadcastInvalidateForBot: Function = this.local__invalidateForBot
-
   private readonly contentTable = 'content_elements'
   private readonly typesDir = 'content-types'
   private readonly elementsDir = 'content-elements'
@@ -54,9 +50,7 @@ export class CMSService implements IDisposeOnExit {
     @inject(TYPES.LoggerProvider) private loggerProvider: LoggerProvider,
     @inject(TYPES.GhostService) private ghost: GhostService,
     @inject(TYPES.ConfigProvider) private configProvider: ConfigProvider,
-    @inject(TYPES.InMemoryDatabase) private memDb: KnexExtended,
-    @inject(TYPES.JobService) private jobService: JobService,
-    @inject(TYPES.EventEngine) private eventEngine: EventEngine
+    @inject(TYPES.InMemoryDatabase) private memDb: KnexExtended
   ) {}
 
   disposeOnExit() {
@@ -64,8 +58,6 @@ export class CMSService implements IDisposeOnExit {
   }
 
   async initialize() {
-    this.broadcastInvalidateForBot = await this.jobService.broadcast<string>(this.local__invalidateForBot.bind(this))
-
     await this.prepareDb()
   }
 
@@ -125,10 +117,9 @@ export class CMSService implements IDisposeOnExit {
     }
   }
 
-  async deleteAllElements(botId: string): Promise<void> {
-    const files = await this.ghost.forBot(botId).directoryListing(this.elementsDir, '*.json')
-    await Promise.map(files, file => this.ghost.forBot(botId).deleteFile(this.elementsDir, file))
+  async refreshElements(botId: string) {
     await this.clearElementsFromCache(botId)
+    await this.loadElementsForBot(botId)
   }
 
   async clearElementsFromCache(botId: string) {

@@ -218,7 +218,7 @@ export class ScopedFlowService {
 
   private async parseFlow(flowPath: string): Promise<FlowView> {
     const flow = await this.ghost.readFileAsObject<Flow>(FLOW_DIR, flowPath)
-    const schemaError = validateFlowSchema(flow, await this._isOneFlow())
+    const schemaError = validateFlowSchema(flow)
 
     if (!flow || schemaError) {
       throw new Error(`Invalid schema for "${flowPath}". ${schemaError} `)

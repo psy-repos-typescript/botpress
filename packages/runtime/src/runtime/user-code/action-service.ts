@@ -16,7 +16,7 @@ import { ActionExecutionError } from 'runtime/dialog/errors'
 import { addErrorToEvent, addStepToEvent, StepScopes, StepStatus } from 'runtime/events'
 import { UntrustedSandbox } from 'runtime/misc/code-sandbox'
 import { printObject } from 'runtime/misc/print'
-import { requireFromString } from 'runtime/modules/utils/require'
+import { clearRequireCache, requireFromString } from 'runtime/modules/utils/require'
 import { TYPES } from 'runtime/types'
 import { NodeVM } from 'vm2'
 import yn from 'yn'
@@ -35,72 +35,48 @@ import {
 import { VmRunner } from './vm'
 
 const debug = DEBUG('actions')
-const DEBOUNCE_DELAY = ms('2s')
 
 // node_production_modules are node_modules that are compressed for production
 const EXCLUDES = ['**/node_modules/**', '**/node_production_modules/**']
+export const ACTION_SERVER_AUDIENCE = 'api_user'
 
 export type RunType = 'trusted' | 'legacy' | 'http'
 
 export interface ActionServerResponse {
   event: { state: Pick<IO.EventState, 'temp' | 'user' | 'session'> }
 }
-export const ACTION_SERVER_AUDIENCE = 'api_user'
+
 const ACTION_SERVER_RESPONSE_SCHEMA = joi.object({
   event: joi.object({ state: joi.object({ temp: joi.object(), session: joi.object(), user: joi.object() }) })
 })
 
 @injectable()
 export class ActionService {
-  private _scopedActions: Map<string, Promise<ScopedActionService>> = new Map()
-  private _invalidateDebounce
+  private _scopedActions: Map<string, ScopedActionService> = new Map()
 
   constructor(
     @inject(TYPES.GhostService) private ghost: GhostService,
-    @inject(TYPES.ObjectCache) private cache: ObjectCache,
     @inject(TYPES.TasksRepository) private tasksRepository: TasksRepository,
     @inject(TYPES.BotService) private botService: BotService,
     @inject(TYPES.Logger)
     @tagged('name', 'ActionService')
     private logger: Logger
-  ) {
-    this._listenForCacheInvalidation()
-    this._invalidateDebounce = _.debounce(this._invalidateRequire, DEBOUNCE_DELAY, { leading: true, trailing: false })
-  }
+  ) {}
 
-  public async forBot(botId: string): Promise<ScopedActionService> {
+  public forBot(botId: string): ScopedActionService {
     if (this._scopedActions.has(botId)) {
       return this._scopedActions.get(botId)!
     }
 
-    const service = new Promise<ScopedActionService>(async cb => {
-      if (!(await this.botService.botExists(botId, true))) {
-        throw new Error('This bot does not exist')
-      }
+    if (!this.botService.isBotMounted(botId)) {
+      throw new Error('This bot does is not mounted')
+    }
 
-      //  const workspaceId = await this.workspaceService.getBotWorkspaceId(botId)
-      const workspaceId = 'default'
-      cb(new ScopedActionService(this.ghost, this.logger, botId, this.cache, this.tasksRepository, workspaceId))
-    })
+    const workspaceId = this.botService.getBotWorkspaceId(botId)
+    const service = new ScopedActionService(this.ghost, this.logger, botId, this.tasksRepository, workspaceId)
 
     this._scopedActions.set(botId, service)
     return service
-  }
-
-  private _listenForCacheInvalidation() {
-    // this.cache.events.on('invalidation', key => {
-    //   if (key.toLowerCase().indexOf('/actions') > -1 || key.toLowerCase().indexOf('/libraries') > -1) {
-    //     this._invalidateDebounce(key)
-    //   }
-    // })
-  }
-
-  // Debouncing invalidate since we get a lot of events when it happens
-  private _invalidateRequire() {
-    // Object.keys(require.cache)
-    //   .filter(r => r.match(/(\\|\/)(actions|shared_libs|libraries)(\\|\/)/g))
-    //   .map(file => delete require.cache[file])
-    // clearRequireCache()
   }
 }
 
@@ -121,11 +97,21 @@ export class ScopedActionService {
     private ghost: GhostService,
     private logger: Logger,
     private botId: string,
-    private cache: ObjectCache,
     private tasksRepository: TasksRepository,
     private workspaceId: string
-  ) {
-    this._listenForCacheInvalidation()
+  ) {}
+
+  public clearRequireCache() {
+    this._scriptsCache.clear()
+    this._globalActionsCache = undefined
+    this._localActionsCache = undefined
+    this._validScripts = {}
+
+    Object.keys(require.cache)
+      .filter(r => r.match(/(\\|\/)(actions|shared_libs|libraries)(\\|\/)/g))
+      .map(file => delete require.cache[file])
+
+    clearRequireCache()
   }
 
   async listActions(): Promise<LocalActionDefinition[]> {
@@ -366,23 +352,6 @@ export class ScopedActionService {
     const _require = prepareRequire(dirPath, lookups)
 
     return { code, _require, dirPath, action }
-  }
-
-  private _listenForCacheInvalidation() {
-    const clearDebounce = _.debounce(this._clearCache.bind(this), DEBOUNCE_DELAY, { leading: true, trailing: false })
-
-    this.cache.events.on('invalidation', key => {
-      if (key.toLowerCase().indexOf('/actions') > -1) {
-        clearDebounce()
-      }
-    })
-  }
-
-  private _clearCache() {
-    this._scriptsCache.clear()
-    this._globalActionsCache = undefined
-    this._localActionsCache = undefined
-    this._validScripts = {}
   }
 
   private async _getActionDefinition(file: string, scope: ActionScope): Promise<LocalActionDefinition> {

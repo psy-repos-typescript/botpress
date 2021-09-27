@@ -49,7 +49,10 @@ export class ConfigProvider {
       return this._botpressConfigCache
     }
 
-    return {} as any
+    const config = await this.getConfig<RuntimeConfig>('botpress.config.json')
+    this._botpressConfigCache = config
+
+    return config
   }
 
   async getBotConfig(botId: string): Promise<BotConfig> {

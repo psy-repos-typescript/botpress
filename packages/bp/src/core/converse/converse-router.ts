@@ -3,7 +3,6 @@ import { Logger } from 'botpress/sdk'
 import { StandardError } from 'common/http'
 import { HTTPServer } from 'core/app/server'
 import { ConfigProvider } from 'core/config'
-import { ConverseService } from 'core/converse'
 import { CustomRouter } from 'core/routers/customRouter'
 import { AuthService, TOKEN_AUDIENCE, checkTokenHeader } from 'core/security'
 import { RequestHandler, Router } from 'express'
@@ -31,7 +30,6 @@ export class ConverseRouter extends CustomRouter {
 
   constructor(
     logger: Logger,
-    private converseService: ConverseService,
     private authService: AuthService,
     private httpServer: HTTPServer,
     private configProvider: ConfigProvider
@@ -88,7 +86,8 @@ export class ConverseRouter extends CustomRouter {
       this.asyncMiddleware(async (req, res) => {
         const { userId, botId } = req.params
 
-        const rawOutput = await this.converseService.sendMessage(
+        const runtime = await getRuntime()
+        const rawOutput = await runtime.sendConverseMessage(
           botId,
           userId,
           _.omit(req.body, ['includedContexts']),

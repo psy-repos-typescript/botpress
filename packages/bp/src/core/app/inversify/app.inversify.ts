@@ -1,6 +1,5 @@
 import { Logger } from 'botpress/sdk'
 import { BotpressAPIProvider } from 'core/app/api'
-import { BotpressRuntimeAPIProvider } from 'core/app/api-runtime'
 import { Botpress } from 'core/app/botpress'
 import { HTTPServer } from 'core/app/server'
 import { ConfigProvider } from 'core/config'
@@ -64,12 +63,6 @@ container // TODO Implement this
   .to(BotpressAPIProvider)
   .inSingletonScope()
   .when(() => !process.IS_RUNTIME)
-
-container
-  .bind<BotpressAPIProvider>(TYPES.BotpressAPIProvider)
-  .to(BotpressRuntimeAPIProvider as any)
-  .inSingletonScope()
-  .when(() => process.IS_RUNTIME)
 
 container
   .bind<ModuleLoader>(TYPES.ModuleLoader)

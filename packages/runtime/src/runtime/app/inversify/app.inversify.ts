@@ -5,6 +5,7 @@ import { ConfigProvider } from 'runtime/config'
 import { EventCollector } from 'runtime/events'
 import { LoggerDbPersister, LoggerFilePersister, LoggerProvider, PersistedConsoleLogger } from 'runtime/logger'
 import { BotpressRuntimeAPIProvider } from '../api'
+import { HTTPServer } from '../server'
 
 import { TYPES } from '../types'
 import { DatabaseContainerModules } from './database.inversify'
@@ -50,6 +51,11 @@ container
 container
   .bind<BotpressRuntimeAPIProvider>(TYPES.BotpressAPIProvider)
   .to(BotpressRuntimeAPIProvider)
+  .inSingletonScope()
+
+container
+  .bind<HTTPServer>(TYPES.HTTPServer)
+  .to(HTTPServer)
   .inSingletonScope()
 
 container

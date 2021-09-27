@@ -2,7 +2,7 @@ import { Logger, RouterOptions } from 'botpress/sdk'
 import { HTTPServer } from 'core/app/server'
 import { BotService } from 'core/bots'
 import { ConfigProvider } from 'core/config'
-import { ConverseRouter, ConverseService } from 'core/converse'
+import { ConverseRouter } from 'core/converse'
 import { EventRepository } from 'core/events'
 import { MediaServiceProvider } from 'core/media'
 import { MessagingBotRouter } from 'core/messaging'
@@ -42,7 +42,6 @@ export class BotsRouter extends CustomRouter {
     private authService: AuthService,
     private workspaceService: WorkspaceService,
     private nluService: NLUService,
-    private converseService: ConverseService,
     private logger: Logger,
     private mediaServiceProvider: MediaServiceProvider,
     private eventRepo: EventRepository,
@@ -56,13 +55,7 @@ export class BotsRouter extends CustomRouter {
     this.checkTokenHeader = checkTokenHeader(this.authService, TOKEN_AUDIENCE)
 
     this.nluRouter = new NLURouter(this.logger, this.authService, this.workspaceService, this.nluService)
-    this.converseRouter = new ConverseRouter(
-      this.logger,
-      this.converseService,
-      this.authService,
-      this.httpServer,
-      this.configProvider
-    )
+    this.converseRouter = new ConverseRouter(this.logger, this.authService, this.httpServer, this.configProvider)
     this.messagingRouter = new MessagingBotRouter(this.logger, this.authService, this.eventRepo)
     this.qnaRouter = new QnaRouter(this.logger, this.authService, this.workspaceService, this.qnaService)
   }

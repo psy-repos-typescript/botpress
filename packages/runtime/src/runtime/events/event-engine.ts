@@ -182,8 +182,6 @@ export class EventEngine {
   }
 
   async sendEvent(event: sdk.IO.Event): Promise<void> {
-    this.validateEvent(event)
-
     if (event.debugger) {
       addStepToEvent(event, StepScopes.Received)
       this.eventCollector.storeEvent(event)
@@ -250,18 +248,6 @@ export class EventEngine {
     const result = joi.validate(middleware, mwSchema)
     if (result.error) {
       throw new VError(result.error, 'Invalid middleware definition')
-    }
-  }
-
-  private validateEvent(event: sdk.IO.Event) {
-    if (process.IS_PRODUCTION) {
-      // In production we optimize for speed, validation is useful for debugging purposes
-      return
-    }
-
-    const result = joi.validate(event, eventSchema)
-    if (result.error) {
-      throw new VError(result.error, 'Invalid Botpress Event')
     }
   }
 

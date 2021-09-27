@@ -238,10 +238,6 @@ export function createForGlobalHooks(augmentApi?: any): Promise<typeof sdk> {
   return container.get<BotpressRuntimeAPIProvider>(TYPES.BotpressAPIProvider).create('Hooks', 'hooks', augmentApi)
 }
 
-export function createForBotpress(): Promise<typeof sdk> {
-  return container.get<BotpressRuntimeAPIProvider>(TYPES.BotpressAPIProvider).create('Botpress', 'botpress')
-}
-
 export function createForAction(augmentApi?: any): Promise<typeof sdk> {
   return container.get<BotpressRuntimeAPIProvider>(TYPES.BotpressAPIProvider).create('Actions', 'actions', augmentApi)
 }

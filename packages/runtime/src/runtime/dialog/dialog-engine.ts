@@ -535,7 +535,7 @@ export class DialogEngine {
   }
 
   protected async _loadFlows(botId: string) {
-    const flows = await this.flowService.forBot(botId).loadAll()
+    const flows = await this.flowService.forBot(botId).getAllFlows()
     this._flowsByBot.set(botId, flows)
   }
 

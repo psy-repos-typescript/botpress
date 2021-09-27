@@ -1,5 +1,4 @@
 import * as sdk from 'botpress/runtime-sdk'
-import { ObjectCache } from 'common/object-cache'
 import { ActionScope } from 'common/typings'
 import { inject, injectable, tagged } from 'inversify'
 import _ from 'lodash'
@@ -9,7 +8,7 @@ import { GhostService } from 'runtime/bpfs'
 import { addErrorToEvent, addStepToEvent, StepScopes, StepStatus } from 'runtime/events'
 import { UntrustedSandbox } from 'runtime/misc/code-sandbox'
 import { printObject } from 'runtime/misc/print'
-import { requireAtPaths } from 'runtime/modules/utils/require'
+import { clearRequireCache, requireAtPaths } from 'runtime/modules/utils/require'
 import { TYPES } from 'runtime/types'
 import { NodeVM } from 'vm2'
 
@@ -17,7 +16,6 @@ import { filterDisabled, getBaseLookupPaths, runOutsideVm } from './utils'
 import { VmRunner } from './vm'
 
 const debug = DEBUG('hooks')
-const DEBOUNCE_DELAY = ms('2s')
 
 interface HookOptions {
   timeout: number
@@ -40,6 +38,7 @@ export namespace Hooks {
     }
   }
 
+  // Core or runtime hook?
   export class AfterServerStart extends BaseHook {
     constructor(private bp: typeof sdk) {
       super('after_server_start', { bp })
@@ -161,9 +160,18 @@ export class HookService {
     @inject(TYPES.Logger)
     @tagged('name', 'HookService')
     private logger: sdk.Logger,
-    @inject(TYPES.GhostService) private ghost: GhostService,
-    @inject(TYPES.ObjectCache) private cache: ObjectCache
+    @inject(TYPES.GhostService) private ghost: GhostService
   ) {}
+
+  public clearRequireCache() {
+    this._scriptsCache.clear()
+
+    Object.keys(require.cache)
+      .filter(r => r.match(/(\\|\/)(hooks|shared_libs|libraries)(\\|\/)/g))
+      .map(file => delete require.cache[file])
+
+    clearRequireCache()
+  }
 
   async executeHook(hook: Hooks.BaseHook): Promise<void> {
     const botId = hook.args?.event?.botId || hook.args?.botId
@@ -224,6 +232,7 @@ export class HookService {
     const botId = _.get(hook.args, 'event.botId')
 
     hook.debug.forBot(botId, 'before execute %o', { path: hookScript.path, botId, args: _.omit(hook.args, ['bp']) })
+    process.BOTPRESS_EVENTS.emit(hook.folder, hook.args)
 
     if (runOutsideVm(scope)) {
       await this.runWithoutVm(hookScript, hook, botId, _require)

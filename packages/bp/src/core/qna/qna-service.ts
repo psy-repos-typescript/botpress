@@ -37,29 +37,6 @@ export class QnaService {
     private botService: BotService
   ) {}
 
-  initialize() {
-    this.eventEngine.register({
-      name: 'qna.incoming',
-      direction: 'incoming',
-      handler: async (event: any, next) => {
-        if (!event.hasFlag(WellKnownFlags.SKIP_QNA_PROCESSING)) {
-          try {
-            const { defaultLang, qnaDisabled } = await this._getBotConfig(event.botId)
-            if (defaultLang && !qnaDisabled) {
-              await this._processEvent(event, defaultLang)
-            }
-
-            next()
-          } catch (err) {
-            next(err)
-          }
-        }
-      },
-      order: 130, // must be after the NLU middleware and before the dialog middleware
-      description: 'Listen for predefined questions and send canned responses.'
-    })
-  }
-
   getQuestionForIntent = async (intentName: string, botId: string) => {
     if (intentName && intentName.startsWith(NLU_PREFIX)) {
       const qnaId = intentName.substring(NLU_PREFIX.length)
@@ -122,21 +99,6 @@ export class QnaService {
         defaultLang: botInfo.defaultLanguage,
         qnaDisabled: botInfo.qna?.disabled ?? false
       })
-    }
-  }
-
-  private _processEvent = async (event: sdk.IO.IncomingEvent, defaultLang: string) => {
-    if (!event.nlu || !event.nlu.intents || event.ndu) {
-      return
-    }
-
-    for (const intent of event.nlu.intents) {
-      const qnaEntry = await this.getQuestionForIntent(intent.name, event.botId)
-      if (qnaEntry && qnaEntry.enabled) {
-        event.suggestions?.push(
-          await this._buildSuggestions(event, qnaEntry, intent.confidence, intent.name, defaultLang)
-        )
-      }
     }
   }
 
@@ -223,30 +185,5 @@ export class QnaService {
       target: event.target,
       threadId: event.threadId
     })
-  }
-
-  private _buildSuggestions = async (
-    event: sdk.IO.IncomingEvent,
-    qnaEntry: QnaEntry,
-    confidence,
-    intent,
-    defaultLang
-  ): Promise<sdk.IO.Suggestion> => {
-    const payloads: any = []
-
-    if (qnaEntry.action.includes('text')) {
-      payloads.push(...(await this._getQnaEntryPayloads(qnaEntry, event, TEXT_RENDERER, defaultLang)))
-    }
-
-    if (qnaEntry.action.includes('redirect')) {
-      payloads.push({ type: 'redirect', flow: qnaEntry.redirectFlow, node: qnaEntry.redirectNode })
-    }
-
-    return <sdk.IO.Suggestion>{
-      confidence,
-      payloads,
-      source: 'qna',
-      sourceDetails: intent
-    }
   }
 }

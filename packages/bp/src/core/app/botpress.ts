@@ -7,18 +7,14 @@ import { BotService, BotMonitoringService } from 'core/bots'
 import { GhostService } from 'core/bpfs'
 import { CMSService } from 'core/cms'
 import { BotpressConfig, ConfigProvider } from 'core/config'
-import { buildUserKey, converseApiEvents } from 'core/converse'
 import Database from 'core/database'
-import { StateManager, DecisionEngine, DialogEngine, DialogJanitor, WellKnownFlags } from 'core/dialog'
-import { SessionIdFactory } from 'core/dialog/sessions'
-import { addStepToEvent, EventCollector, StepScopes, StepStatus, EventEngine, Event } from 'core/events'
+import { EventEngine } from 'core/events'
 import { AlertingService, MonitoringService } from 'core/health'
 import { LoggerDbPersister, LoggerFilePersister, LoggerProvider, LogsJanitor } from 'core/logger'
 import { MessagingService } from 'core/messaging'
 import { MigrationService } from 'core/migration'
 import { copyDir } from 'core/misc/pkg-fs'
 import { ModuleLoader } from 'core/modules'
-import { QnaService } from 'core/qna'
 import { RealtimeService } from 'core/realtime'
 import { AuthService } from 'core/security'
 import { StatsService, AnalyticsService } from 'core/telemetry'
@@ -69,26 +65,20 @@ export class Botpress {
     @inject(TYPES.RealtimeService) private realtimeService: RealtimeService,
     @inject(TYPES.EventEngine) private eventEngine: EventEngine,
     @inject(TYPES.CMSService) private cmsService: CMSService,
-    @inject(TYPES.DialogEngine) private dialogEngine: DialogEngine,
-    @inject(TYPES.DecisionEngine) private decisionEngine: DecisionEngine,
     @inject(TYPES.LoggerProvider) private loggerProvider: LoggerProvider,
-    @inject(TYPES.DialogJanitorRunner) private dialogJanitor: DialogJanitor,
     @inject(TYPES.LogJanitorRunner) private logJanitor: LogsJanitor,
     @inject(TYPES.LoggerDbPersister) private loggerDbPersister: LoggerDbPersister,
     @inject(TYPES.LoggerFilePersister) private loggerFilePersister: LoggerFilePersister,
-    @inject(TYPES.StateManager) private stateManager: StateManager,
     @inject(TYPES.DataRetentionJanitor) private dataRetentionJanitor: DataRetentionJanitor,
     @inject(TYPES.DataRetentionService) private dataRetentionService: DataRetentionService,
     @inject(TYPES.WorkspaceService) private workspaceService: WorkspaceService,
     @inject(TYPES.BotService) private botService: BotService,
     @inject(TYPES.MonitoringService) private monitoringService: MonitoringService,
     @inject(TYPES.AlertingService) private alertingService: AlertingService,
-    @inject(TYPES.EventCollector) private eventCollector: EventCollector,
     @inject(TYPES.AuthService) private authService: AuthService,
     @inject(TYPES.MigrationService) private migrationService: MigrationService,
     @inject(TYPES.StatsService) private statsService: StatsService,
     @inject(TYPES.BotMonitoringService) private botMonitor: BotMonitoringService,
-    @inject(TYPES.QnaService) private qnaService: QnaService,
     @inject(TYPES.MessagingService) private messagingService: MessagingService
   ) {
     this.botpressPath = path.join(process.cwd(), 'dist')
@@ -149,12 +139,14 @@ export class Botpress {
       await this.maybeStartLocalActionServer()
     }
 
-    await this.discoverBots()
+    const bots = await this.discoverBots()
 
     if (this.config.sendUsageStats) {
       await this.statsService.start()
     }
-    await this.initRuntime()
+
+    await this.initRuntime(bots)
+    await this.mountBots(bots)
 
     AppLifecycle.setDone(AppLifecycleEvents.BOTPRESS_READY)
 
@@ -162,7 +154,7 @@ export class Botpress {
     await this.hookService.executeHook(new Hooks.AfterServerStart(this.api))
   }
 
-  async initRuntime() {
+  async initRuntime(bots: string[]) {
     const runtimeConfig = _.pick(this.config, [
       'converse',
       'dialog',
@@ -183,10 +175,10 @@ export class Botpress {
         actions: await createForAction()
       },
       middlewares: await this.eventEngine.getMiddlewares(),
-      bots: await this.botService.getBotsIds()
+      bots
     }
 
-    const runtime = await getRuntime(opt)
+    await getRuntime(opt)
   }
 
   async restoreDebugScope() {
@@ -378,7 +370,7 @@ export class Botpress {
   }
 
   @WrapErrorsWith('Error while discovering bots')
-  async discoverBots(): Promise<void> {
+  async discoverBots(): Promise<string[]> {
     if (!process.IS_RUNTIME) {
       await AppLifecycle.waitFor(AppLifecycleEvents.MODULES_READY)
     }
@@ -423,6 +415,10 @@ export class Botpress {
       }`
     )
 
+    return botsToMount
+  }
+
+  private async mountBots(botsToMount: string[]) {
     const maxConcurrentMount = parseInt(process.env.MAX_CONCURRENT_MOUNT || '5')
     await Promise.map(botsToMount, botId => this.botService.mountBot(botId), { concurrency: maxConcurrentMount })
   }
@@ -440,108 +436,13 @@ export class Botpress {
     await this.authService.initialize()
     await this.workspaceService.initialize()
     await this.cmsService.initialize()
-    // await this.eventCollector.initialize(this.database)
-    await this.qnaService.initialize()
-
-    // this.eventEngine.onBeforeIncomingMiddleware = async (event: sdk.IO.IncomingEvent) => {
-    //   await this.stateManager.restore(event)
-    //   addStepToEvent(event, StepScopes.StateLoaded)
-    //   await this.hookService.executeHook(new Hooks.BeforeIncomingMiddleware(this.api, event))
-    // }
-
-    // this.eventEngine.onAfterIncomingMiddleware = async (event: sdk.IO.IncomingEvent) => {
-    //   if (event.isPause) {
-    //     this.eventCollector.storeEvent(event)
-    //     return
-    //   }
-
-    //   if (event.ndu && event.type === 'workflow_ended') {
-    //     const hasWorkflowEndedTrigger = Object.keys(event.ndu.triggers).find(
-    //       x => event.ndu?.triggers[x].result['workflow_ended'] === 1
-    //     )
-
-    //     if (!hasWorkflowEndedTrigger) {
-    //       event.setFlag(WellKnownFlags.SKIP_DIALOG_ENGINE, true)
-    //     }
-    //   }
-
-    //   await this.hookService.executeHook(new Hooks.AfterIncomingMiddleware(this.api, event))
-    //   const sessionId = SessionIdFactory.createIdFromEvent(event)
-
-    //   if (event.debugger) {
-    //     addStepToEvent(event, StepScopes.Dialog, StepStatus.Started)
-    //     this.eventCollector.storeEvent(event)
-    //   }
-
-    //   await this.decisionEngine.processEvent(sessionId, event)
-
-    //   if (event.debugger) {
-    //     addStepToEvent(event, StepScopes.EndProcessing)
-    //     this.eventCollector.storeEvent(event)
-    //   }
-
-    //   await converseApiEvents.emitAsync(`done.${buildUserKey(event.botId, event.target)}`, event)
-    // }
-
-    // this.eventEngine.onBeforeOutgoingMiddleware = async (event: sdk.IO.OutgoingEvent) => {
-    //   this.eventCollector.storeEvent(event)
-    //   await this.hookService.executeHook(new Hooks.BeforeOutgoingMiddleware(this.api, event))
-    // }
-
-    // this.decisionEngine.onBeforeSuggestionsElection = async (
-    //   sessionId: string,
-    //   event: sdk.IO.IncomingEvent,
-    //   suggestions: sdk.IO.Suggestion[]
-    // ) => {
-    //   await this.hookService.executeHook(new Hooks.BeforeSuggestionsElection(this.api, sessionId, event, suggestions))
-    // }
-
-    // this.decisionEngine.onAfterEventProcessed = async (event: sdk.IO.IncomingEvent) => {
-    //   if (!event.ndu) {
-    //     this.eventCollector.storeEvent(event)
-    //     return this.hookService.executeHook(new Hooks.AfterEventProcessed(this.api, event))
-    //   }
-
-    //   const { workflows } = event.state.session
-
-    //   const activeWorkflow = Object.keys(workflows).find(x => workflows[x].status === 'active')
-    //   const completedWorkflows = Object.keys(workflows).filter(x => workflows[x].status === 'completed')
-
-    //   this.eventCollector.storeEvent(event, activeWorkflow ? workflows[activeWorkflow] : undefined)
-    //   await this.hookService.executeHook(new Hooks.AfterEventProcessed(this.api, event))
-
-    //   completedWorkflows.forEach(async workflow => {
-    //     const wf = workflows[workflow]
-    //     const metric = wf.success ? 'bp_core_workflow_completed' : 'bp_core_workflow_failed'
-    //     BOTPRESS_CORE_EVENT(metric, { botId: event.botId, channel: event.channel, wfName: workflow })
-
-    //     delete event.state.session.workflows[workflow]
-
-    //     if (!activeWorkflow && !wf.parent) {
-    //       await this.eventEngine.sendEvent(
-    //         Event({
-    //           ..._.pick(event, ['botId', 'channel', 'target', 'threadId']),
-    //           direction: 'incoming',
-    //           type: 'workflow_ended',
-    //           payload: { ...wf, workflow }
-    //         })
-    //       )
-    //     }
-    //   })
-    // }
-
-    this.botMonitor.onBotError = async (botId: string, events: sdk.LoggerEntry[]) => {
-      await this.hookService.executeHook(new Hooks.OnBotError(this.api, botId, events))
-    }
 
     await this.dataRetentionService.initialize()
 
-    // await this.stateManager.initialize()
     await this.logJanitor.start()
-    // await this.dialogJanitor.start()
     await this.monitoringService.start()
     this.alertingService.start()
-    // this.eventCollector.start()
+
     await this.botMonitor.start()
 
     if (this.config!.dataRetention) {

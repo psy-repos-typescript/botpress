@@ -1,3 +1,4 @@
+import { getRuntime } from '@botpress/runtime'
 import axios from 'axios'
 import { Logger } from 'botpress/sdk'
 import { UnauthorizedError } from 'common/http'
@@ -78,6 +79,9 @@ export class InternalRouter extends CustomRouter {
         if (!process.CLUSTER_ENABLED) {
           await this.cmsService.broadcastInvalidateForBot(botId)
         }
+
+        const runtime = await getRuntime()
+        runtime.refreshBot(botId)
 
         res.sendStatus(200)
       })

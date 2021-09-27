@@ -19,12 +19,12 @@ X-BP-Workspace: default
 @botId = YOUR_BOT_ID
 
 ### Send a request using Converse
-POST {{baseUrl}}/api/v1/bots/{{botId}}/converse/benchmarkUser
+POST {{baseUrl}}/api/v1/bots/newest_main/converse/izu-UsT4eqCzz1zJeXz3
 Content-Type: application/json
 
 {
   "type": "text",
-  "text": "hey"
+  "text": "text"
 }
 
 ### Test Duckling

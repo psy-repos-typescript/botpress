@@ -5,7 +5,6 @@ import { StateManager } from 'runtime/dialog'
 import { DecisionEngine } from './decision-engine'
 import { DialogEngine } from './dialog-engine'
 import { FlowService } from './flow/flow-service'
-import { FlowNavigator } from './flow/navigator'
 import { InstructionFactory } from './instruction/factory'
 import { InstructionProcessor } from './instruction/processor'
 import { ActionStrategy, TransitionStrategy } from './instruction/strategy'
@@ -18,9 +17,7 @@ export const DialogContainerModule = new ContainerModule((bind: interfaces.Bind)
   bind<DecisionEngine>(TYPES.DecisionEngine)
     .to(DecisionEngine)
     .inSingletonScope()
-  bind<FlowNavigator>(TYPES.FlowNavigator)
-    .to(FlowNavigator)
-    .inSingletonScope()
+
   bind<FlowService>(TYPES.FlowService)
     .to(FlowService)
     .inSingletonScope()

@@ -7,7 +7,7 @@ import { CMSService, renderRecursive, RenderService } from 'core/cms'
 import * as renderEnums from 'core/cms/enums'
 import { ConfigProvider } from 'core/config'
 import Database from 'core/database'
-import { StateManager, DialogEngine, WellKnownFlags } from 'core/dialog'
+import { StateManager, WellKnownFlags } from 'core/dialog'
 import * as dialogEnums from 'core/dialog/enums'
 import { SessionIdFactory } from 'core/dialog/sessions'
 import { JobService } from 'core/distributed'
@@ -57,25 +57,25 @@ const event = (eventEngine: EventEngine, eventRepo: EventRepository): typeof sdk
     removeMiddleware: eventEngine.removeMiddleware.bind(eventEngine),
     sendEvent: eventEngine.sendEvent.bind(eventEngine),
     replyToEvent: eventEngine.replyToEvent.bind(eventEngine),
-    isIncomingQueueEmpty: eventEngine.isIncomingQueueEmpty.bind(eventEngine),
+    // This cant be used in modules anymore
+    // isIncomingQueueEmpty: eventEngine.isIncomingQueueEmpty.bind(eventEngine),
     findEvents: eventRepo.findEvents.bind(eventRepo),
     updateEvent: eventRepo.updateEvent.bind(eventRepo),
     saveUserFeedback: eventRepo.saveUserFeedback.bind(eventRepo)
-  }
+  } as any
 }
 
-const dialog = (
-  dialogEngine: DialogEngine,
-  stateManager: StateManager,
-  moduleLoader: ModuleLoader
-): typeof sdk.dialog => {
+const dialog = (stateManager: StateManager, moduleLoader: ModuleLoader): typeof sdk.dialog => {
   return {
     createId: SessionIdFactory.createIdFromEvent.bind(SessionIdFactory),
-    processEvent: dialogEngine.processEvent.bind(dialogEngine),
+    // This cant be used in modules anymore
+    // processEvent: dialogEngine.processEvent.bind(dialogEngine),
+    // This cant be used in modules anymore
     deleteSession: stateManager.deleteDialogSession.bind(stateManager),
-    jumpTo: dialogEngine.jumpTo.bind(dialogEngine),
+    // This cant be used in modules anymore
+    //  jumpTo: dialogEngine.jumpTo.bind(dialogEngine),
     getConditions: moduleLoader.getDialogConditions.bind(moduleLoader)
-  }
+  } as any
 }
 
 const config = (moduleLoader: ModuleLoader, configProvider: ConfigProvider): typeof sdk.config => {
@@ -244,7 +244,6 @@ export class BotpressAPIProvider {
   distributed: typeof sdk.distributed
 
   constructor(
-    @inject(TYPES.DialogEngine) dialogEngine: DialogEngine,
     @inject(TYPES.Database) db: Database,
     @inject(TYPES.EventEngine) eventEngine: EventEngine,
     @inject(TYPES.ModuleLoader) moduleLoader: ModuleLoader,
@@ -267,7 +266,7 @@ export class BotpressAPIProvider {
   ) {
     this.http = http(httpServer)
     this.events = event(eventEngine, eventRepo)
-    this.dialog = dialog(dialogEngine, stateManager, moduleLoader)
+    this.dialog = dialog(stateManager, moduleLoader)
     this.config = config(moduleLoader, configProvider)
     this.realtime = realtime(realtimeService)
     this.database = db.knex

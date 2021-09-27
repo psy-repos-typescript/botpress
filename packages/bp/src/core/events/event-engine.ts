@@ -1,20 +1,13 @@
 import { getRuntime } from '@botpress/runtime'
 import * as sdk from 'botpress/sdk'
 import { TYPES } from 'core/app/types'
-import { WellKnownFlags } from 'core/dialog'
-import { incrementMetric } from 'core/health'
 import { TimedPerfCounter } from 'core/misc/timed-perf'
 import { inject, injectable, tagged } from 'inversify'
 import joi from 'joi'
 import _ from 'lodash'
-import { coreActions, runtimeActions } from 'orchestrator'
 import { VError } from 'verror'
 import yn from 'yn'
-import { EventCollector } from './event-collector'
 import { Event } from './event-sdk-impl'
-import { MiddlewareChain } from './middleware-chain'
-import { Queue } from './queue'
-import { addStepToEvent, StepScopes } from './utils'
 
 const directionRegex = /^(incoming|outgoing)$/
 
@@ -91,10 +84,6 @@ const debugOutgoing = debug.sub('outgoing')
 
 @injectable()
 export class EventEngine {
-  public onBeforeIncomingMiddleware?: (event: sdk.IO.IncomingEvent) => Promise<void>
-  public onAfterIncomingMiddleware?: (event: sdk.IO.IncomingEvent) => Promise<void>
-  public onBeforeOutgoingMiddleware?: (event: sdk.IO.OutgoingEvent) => Promise<void>
-
   private readonly _incomingPerf = new TimedPerfCounter('mw_incoming')
   private readonly _outgoingPerf = new TimedPerfCounter('mw_outgoing')
 
@@ -104,34 +93,8 @@ export class EventEngine {
   constructor(
     @inject(TYPES.Logger)
     @tagged('name', 'EventEngine')
-    private logger: sdk.Logger,
-    @inject(TYPES.IncomingQueue) private incomingQueue: Queue<sdk.IO.IncomingEvent>,
-    @inject(TYPES.OutgoingQueue) private outgoingQueue: Queue<sdk.IO.OutgoingEvent>,
-    @inject(TYPES.EventCollector) private eventCollector: EventCollector
+    private logger: sdk.Logger
   ) {
-    this.incomingQueue.subscribe(async (event: sdk.IO.IncomingEvent) => {
-      await this._infoMiddleware(event)
-      this.onBeforeIncomingMiddleware && (await this.onBeforeIncomingMiddleware(event))
-      const { incoming } = await this.getMiddlewareChains()
-      await incoming.run(event)
-      this.onAfterIncomingMiddleware && (await this.onAfterIncomingMiddleware(event))
-      this._incomingPerf.record()
-    })
-
-    this.outgoingQueue.subscribe(async (event: sdk.IO.OutgoingEvent) => {
-      this.onBeforeOutgoingMiddleware && (await this.onBeforeOutgoingMiddleware(event))
-      const { outgoing } = await this.getMiddlewareChains()
-      await outgoing.run(event)
-      this._outgoingPerf.record()
-
-      addStepToEvent(event, StepScopes.EndProcessing)
-      this.eventCollector.storeEvent(event)
-
-      if (process.IS_RUNTIME) {
-        await coreActions.sendOutgoing(event)
-      }
-    })
-
     this.setupPerformanceHooks()
   }
 
@@ -191,35 +154,10 @@ export class EventEngine {
   }
 
   async sendEvent(event: sdk.IO.Event): Promise<void> {
+    this.validateEvent(event)
+
     const runtime = await getRuntime()
     return runtime.sendEvent(event)
-    // this.validateEvent(event)
-
-    // if (event.debugger) {
-    //   addStepToEvent(event, StepScopes.Received)
-    //   this.eventCollector.storeEvent(event)
-    // }
-
-    // const isIncoming = (event: sdk.IO.Event): event is sdk.IO.IncomingEvent => event.direction === 'incoming'
-
-    // // if (!process.IS_RUNTIME && process.RUNTIME_COUNT && isIncoming(event)) {
-    // //   await runtimeActions.sendIncoming(event)
-    // //   return
-    // // }
-
-    // if (isIncoming(event)) {
-    //   if (!process.IS_RUNTIME && process.RUNTIME_COUNT) {
-    //     return runtimeActions.sendIncoming(event)
-    //   }
-
-    //   debugIncoming.forBot(event.botId, 'send ', event)
-    //   incrementMetric('eventsIn.count')
-    //   await this.incomingQueue.enqueue(event, 1, false)
-    // } else {
-    //   debugOutgoing.forBot(event.botId, 'send ', event)
-    //   incrementMetric('eventsOut.count')
-    //   await this.outgoingQueue.enqueue(event, 1, false)
-    // }
   }
 
   async replyToEvent(eventDestination: sdk.IO.EventDestination, payloads: any[], incomingEventId?: string) {
@@ -239,33 +177,6 @@ export class EventEngine {
     }
   }
 
-  isIncomingQueueEmpty(event: sdk.IO.IncomingEvent): boolean {
-    return this.incomingQueue.isEmptyForJob(event)
-  }
-
-  isOutgoingQueueEmpty(event: sdk.IO.IncomingEvent): boolean {
-    return this.outgoingQueue.isEmptyForJob(event)
-  }
-
-  isOutgoingQueueLocked(event: sdk.IO.IncomingEvent): boolean {
-    return this.outgoingQueue.isQueueLockedForJob(event)
-  }
-
-  private async getMiddlewareChains() {
-    const incoming = new MiddlewareChain()
-    const outgoing = new MiddlewareChain()
-
-    for (const mw of this.incomingMiddleware) {
-      incoming.use(mw)
-    }
-
-    for (const mw of this.outgoingMiddleware) {
-      outgoing.use(mw)
-    }
-
-    return { incoming, outgoing }
-  }
-
   private validateMiddleware(middleware: sdk.IO.MiddlewareDefinition) {
     const result = joi.validate(middleware, mwSchema)
     if (result.error) {
@@ -282,24 +193,6 @@ export class EventEngine {
     const result = joi.validate(event, eventSchema)
     if (result.error) {
       throw new VError(result.error, 'Invalid Botpress Event')
-    }
-  }
-
-  private async _infoMiddleware(event: sdk.IO.Event) {
-    const sendText = async text => {
-      await this.replyToEvent(event, [{ text, markdown: true }])
-      event.setFlag(WellKnownFlags.SKIP_DIALOG_ENGINE, true)
-    }
-
-    if (event.preview === 'BP_VERSION') {
-      await sendText(`Version: ${process.BOTPRESS_VERSION}`)
-    } else if (event.preview === 'BP_LICENSE') {
-      await sendText(
-        `**Botpress Pro**
-Available: ${process.IS_PRO_AVAILABLE}
-Enabled: ${process.IS_PRO_ENABLED}
-Licensed: ${process.IS_LICENSED}`
-      )
     }
   }
 }

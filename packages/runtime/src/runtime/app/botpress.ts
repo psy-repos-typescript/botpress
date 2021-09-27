@@ -4,6 +4,7 @@ import { RuntimeSetup } from 'index'
 import { inject, injectable, tagged } from 'inversify'
 import _ from 'lodash'
 import moment from 'moment'
+import ms from 'ms'
 import path from 'path'
 import { BotService, BotMonitoringService } from 'runtime/bots'
 import { GhostService } from 'runtime/bpfs'
@@ -12,27 +13,25 @@ import { RuntimeConfig, ConfigProvider } from 'runtime/config'
 
 import { buildUserKey, converseApiEvents, ConverseService } from 'runtime/converse'
 import Database from 'runtime/database'
-import { StateManager, DecisionEngine, DialogEngine, DialogJanitor, WellKnownFlags } from 'runtime/dialog'
+import { StateManager, DecisionEngine, DialogEngine, DialogJanitor, WellKnownFlags, FlowService } from 'runtime/dialog'
 import { SessionIdFactory } from 'runtime/dialog/sessions'
 import { addStepToEvent, EventCollector, StepScopes, StepStatus, EventEngine, Event, IOEvent } from 'runtime/events'
 import { AppLifecycle, AppLifecycleEvents } from 'runtime/lifecycle'
 import { LoggerDbPersister, LoggerFilePersister, LoggerProvider, LogsJanitor } from 'runtime/logger'
 import { QnaService } from 'runtime/qna'
-import { Hooks, HookService } from 'runtime/user-code'
-
+import { ActionService, Hooks, HookService } from 'runtime/user-code'
 import { getDebugScopes, setDebugScopes } from '../../debug'
 import { createForAction, createForGlobalHooks } from './api'
+import { HTTPServer } from './server'
 
 import { TYPES } from './types'
 
+const DEBOUNCE_DELAY = ms('2s')
+
 @injectable()
 export class Botpress {
-  botpressPath: string
-  configLocation: string
-  modulesConfig: any
   config!: RuntimeConfig | undefined
   api!: typeof sdk
-  _heartbeatTimer?: NodeJS.Timeout
 
   constructor(
     @inject(TYPES.ConfigProvider) private configProvider: ConfigProvider,
@@ -41,10 +40,10 @@ export class Botpress {
     @tagged('name', 'Server')
     private logger: sdk.Logger,
     @inject(TYPES.GhostService) private ghostService: GhostService,
+    @inject(TYPES.HTTPServer) private httpServer: HTTPServer,
     @inject(TYPES.HookService) private hookService: HookService,
     @inject(TYPES.EventEngine) private eventEngine: EventEngine,
     @inject(TYPES.CMSService) private cmsService: CMSService,
-    @inject(TYPES.DialogEngine) private dialogEngine: DialogEngine,
     @inject(TYPES.ConverseService) private converseService: ConverseService,
     @inject(TYPES.DecisionEngine) private decisionEngine: DecisionEngine,
     @inject(TYPES.LoggerProvider) private loggerProvider: LoggerProvider,
@@ -56,54 +55,74 @@ export class Botpress {
     @inject(TYPES.BotService) private botService: BotService,
     @inject(TYPES.EventCollector) private eventCollector: EventCollector,
     @inject(TYPES.BotMonitoringService) private botMonitor: BotMonitoringService,
-    @inject(TYPES.QnaService) private qnaService: QnaService
-  ) {
-    this.botpressPath = path.join(process.cwd(), 'dist')
-    this.configLocation = path.join(this.botpressPath, '/config')
+    @inject(TYPES.QnaService) private qnaService: QnaService,
+    @inject(TYPES.FlowService) private flowService: FlowService,
+    @inject(TYPES.ActionService) private actionService: ActionService
+  ) {}
+
+  private _refreshBot = async (botId: string) => {
+    await this.ghostService.forBot(botId).clearCache()
+
+    await this.cmsService.refreshElements(botId)
+    await this.flowService.forBot(botId).reloadFlows()
+
+    await this.hookService.clearRequireCache()
+    await this.actionService.forBot(botId).clearRequireCache()
   }
+
+  private _refreshDebounced = _.debounce(this._refreshBot, DEBOUNCE_DELAY, { leading: true, trailing: false })
 
   async start(options: RuntimeSetup) {
     const beforeDt = moment()
     await this.initialize(options)
     const bootTime = moment().diff(beforeDt, 'milliseconds')
-    this.logger.info(`Started in ${bootTime}ms`)
+    this.logger.info(`Ready in ${bootTime}ms`)
 
     return {
       sendEvent: this.eventEngine.sendEvent.bind(this.eventEngine),
       sendConverseMessage: this.converseService.sendMessage.bind(this.converseService),
-      mountBot: this.botService.mountBot.bind(this.botService)
+      mountBot: this.botService.mountBot.bind(this.botService),
+      unmountBot: this.botService.unmountBot.bind(this.botService),
+      refreshBot: this._refreshDebounced
     }
   }
 
   private async initialize(options: RuntimeSetup) {
-    this.configProvider.setRuntimeConfig(options.config)
-    this.config = options.config
+    if (!options) {
+      this.config = await this.configProvider.getRuntimeConfig()
+      const bots = await this.botService.getBotsIds()
+      options = {
+        bots
+      } as any
+    } else {
+      this.configProvider.setRuntimeConfig(options.config)
+      this.config = options.config
+    }
 
     setDebugScopes(process.core_env.DEBUG || (process.IS_PRODUCTION ? '' : 'bp:dialog'))
 
     AppLifecycle.setDone(AppLifecycleEvents.CONFIGURATION_LOADED)
 
-    this.api = await createForGlobalHooks(options.api.hooks)
-    await createForAction(options.api.hooks)
+    this.api = await createForGlobalHooks(options.api?.hooks)
+    await createForAction(options.api?.hooks)
+
+    if (options.middlewares) {
+      for (const mw of options.middlewares.incoming) {
+        this.eventEngine.register(mw)
+      }
+
+      for (const mw of options.middlewares.outgoing) {
+        this.eventEngine.register(mw)
+      }
+    }
 
     await this.restoreDebugScope()
-    await this.setupRuntime(options)
     await this.initializeServices()
 
     await this.discoverBots(options.bots)
+    await this.startServer()
 
     AppLifecycle.setDone(AppLifecycleEvents.BOTPRESS_READY)
-
-    await this.hookService.executeHook(new Hooks.AfterServerStart(this.api))
-  }
-
-  async setupRuntime(options: RuntimeSetup) {
-    for (const mw of options.middlewares.incoming) {
-      this.eventEngine.register(mw)
-    }
-    for (const mw of options.middlewares.outgoing) {
-      this.eventEngine.register(mw)
-    }
   }
 
   async restoreDebugScope() {
@@ -117,8 +136,13 @@ export class Botpress {
     }
   }
 
+  private async startServer() {
+    await this.httpServer.start()
+    AppLifecycle.setDone(AppLifecycleEvents.HTTP_SERVER_READY)
+  }
+
   @WrapErrorsWith('Error while discovering bots')
-  async discoverBots(botsToMount): Promise<void> {
+  async discoverBots(botsToMount: string[]): Promise<void> {
     const maxConcurrentMount = parseInt(process.env.MAX_CONCURRENT_MOUNT || '5')
     await Promise.map(botsToMount, botId => this.botService.mountBot(botId), { concurrency: maxConcurrentMount })
   }

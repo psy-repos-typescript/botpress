@@ -46,60 +46,6 @@ export namespace Hooks {
     }
   }
 
-  export class AfterBotMount extends BaseHook {
-    constructor(private bp: typeof sdk, botId: string) {
-      super('after_bot_mount', { bp, botId })
-    }
-  }
-
-  export class AfterBotUnmount extends BaseHook {
-    constructor(private bp: typeof sdk, botId: string) {
-      super('after_bot_unmount', { bp, botId })
-    }
-  }
-
-  export class BeforeIncomingMiddleware extends BaseHook {
-    constructor(bp: typeof sdk, event: sdk.IO.Event) {
-      super('before_incoming_middleware', { bp, event })
-    }
-  }
-
-  export class AfterIncomingMiddleware extends BaseHook {
-    constructor(bp: typeof sdk, event: sdk.IO.Event) {
-      super('after_incoming_middleware', { bp, event })
-    }
-  }
-
-  export class BeforeOutgoingMiddleware extends BaseHook {
-    constructor(bp: typeof sdk, event: sdk.IO.Event) {
-      super('before_outgoing_middleware', { bp, event })
-    }
-  }
-
-  export class AfterEventProcessed extends BaseHook {
-    constructor(bp: typeof sdk, event: sdk.IO.Event) {
-      super('after_event_processed', { bp, event })
-    }
-  }
-
-  export class BeforeSessionTimeout extends BaseHook {
-    constructor(bp: typeof sdk, event: sdk.IO.Event) {
-      super('before_session_timeout', { bp, event })
-    }
-  }
-
-  export class BeforeConversationEnd extends BaseHook {
-    constructor(bp: typeof sdk, event: sdk.IO.Event) {
-      super('before_conversation_end', { bp, event })
-    }
-  }
-
-  export class BeforeSuggestionsElection extends BaseHook {
-    constructor(bp: typeof sdk, sessionId: string, event: sdk.IO.Event, suggestions: sdk.IO.Suggestion[]) {
-      super('before_suggestions_election', { bp, sessionId, event, suggestions })
-    }
-  }
-
   export class OnIncidentStatusChanged extends BaseHook {
     constructor(bp: typeof sdk, incident: sdk.Incident) {
       super('on_incident_status_changed', { bp, incident })
@@ -109,12 +55,6 @@ export namespace Hooks {
   export class BeforeBotImport extends BaseHook {
     constructor(bp: typeof sdk, botId: string, tmpFolder: string, hookResult: object) {
       super('before_bot_import', { bp, botId, tmpFolder, hookResult })
-    }
-  }
-
-  export class OnBotError extends BaseHook {
-    constructor(bp: typeof sdk, botId: string, events: sdk.LoggerEntry[]) {
-      super('on_bot_error', { bp, botId, events })
     }
   }
 
@@ -144,13 +84,7 @@ export namespace Hooks {
 }
 
 class HookScript {
-  constructor(
-    public path: string,
-    public filename: string,
-    public code: string,
-    public name: string,
-    public botId?: string
-  ) {}
+  constructor(public path: string, public filename: string, public code: string, public name: string) {}
 }
 
 @injectable()
@@ -188,8 +122,7 @@ export class HookService {
   }
 
   async executeHook(hook: Hooks.BaseHook): Promise<void> {
-    const botId = hook.args?.event?.botId || hook.args?.botId
-    const scripts = await this.extractScripts(hook, botId)
+    const scripts = await this.extractScripts(hook)
     await Promise.mapSeries(_.orderBy(scripts, ['filename'], ['asc']), script => this.runScript(script, hook))
   }
 
@@ -215,8 +148,8 @@ export class HookService {
     }
   }
 
-  private async extractScripts(hook: Hooks.BaseHook, botId?: string): Promise<HookScript[]> {
-    const scriptKey = botId ? `${hook.folder}_${botId}` : hook.folder
+  private async extractScripts(hook: Hooks.BaseHook): Promise<HookScript[]> {
+    const scriptKey = hook.folder
 
     if (this._scriptsCache.has(scriptKey)) {
       return this._scriptsCache.get(scriptKey)!
@@ -226,11 +159,6 @@ export class HookService {
       const globalHooks = filterDisabled(await this.ghost.global().directoryListing(`hooks/${hook.folder}`, '*.js'))
       const scripts: HookScript[] = await Promise.map(globalHooks, async path => this._getHookScript(hook.folder, path))
 
-      if (botId) {
-        const botHooks = filterDisabled(await this.ghost.forBot(botId).directoryListing(`hooks/${hook.folder}`, '*.js'))
-        scripts.push(...(await Promise.map(botHooks, async path => this._getHookScript(hook.folder, path, botId))))
-      }
-
       this._scriptsCache.set(scriptKey, scripts)
       return scripts
     } catch (err) {
@@ -239,66 +167,36 @@ export class HookService {
     }
   }
 
-  private async _getHookScript(hookFolder: string, path: string, botId?: string) {
-    let script: string
-    if (!botId) {
-      script = await this.ghost.global().readFileAsString(`hooks/${hookFolder}`, path)
-    } else {
-      script = await this.ghost.forBot(botId).readFileAsString(`hooks/${hookFolder}`, path)
-    }
+  private async _getHookScript(hookFolder: string, path: string) {
+    const script = await this.ghost.global().readFileAsString(`hooks/${hookFolder}`, path)
 
     const filename = path.replace(/^.*[\\\/]/, '')
-    return new HookScript(path, filename, script, filename.replace('.js', ''), botId)
+    return new HookScript(path, filename, script, filename.replace('.js', ''))
   }
 
-  private _prepareRequire(fullPath: string, hookType: string, botId?: string) {
-    const lookups = getBaseLookupPaths(fullPath, hookType, botId)
+  private _prepareRequire(fullPath: string, hookType: string) {
+    const lookups = getBaseLookupPaths(fullPath, hookType)
 
     return (module: string) => requireAtPaths(module, lookups, fullPath)
   }
 
   private async runScript(hookScript: HookScript, hook: Hooks.BaseHook) {
-    const scope = (hookScript.botId ? `bots/${hookScript.botId}` : 'global') as ActionScope
-    const hookPath = `/data/${scope}/hooks/${hook.folder}/${hookScript.path}.js`
+    const hookPath = `/data/global/hooks/${hook.folder}/${hookScript.path}.js`
 
     const dirPath = path.resolve(path.join(process.PROJECT_LOCATION, hookPath))
 
-    const _require = this._prepareRequire(dirPath, hook.folder, hookScript.botId)
+    const _require = this._prepareRequire(dirPath, hook.folder)
 
-    const botId = _.get(hook.args, 'event.botId')
+    hook.debug('before execute %o', { path: hookScript.path, args: _.omit(hook.args, ['bp']) })
 
-    hook.debug.forBot(botId, 'before execute %o', { path: hookScript.path, botId, args: _.omit(hook.args, ['bp']) })
-
-    if (runOutsideVm(scope)) {
-      await this.runWithoutVm(hookScript, hook, botId, _require)
+    if (runOutsideVm('global')) {
+      await this.runWithoutVm(hookScript, hook, _require)
     } else {
-      await this.runInVm(hookScript, hook, botId, _require)
+      await this.runInVm(hookScript, hook, _require)
     }
-
-    hook.debug.forBot(botId, 'after execute')
   }
 
-  private addEventStep = (hookName: string, status: string, hook: Hooks.BaseHook, error?: any) => {
-    if (!hook.args?.event) {
-      return
-    }
-
-    const event = hook.args.event as sdk.IO.Event
-    if (error) {
-      addErrorToEvent(
-        {
-          type: 'hook-execution',
-          stacktrace: error.stacktrace || error.stack,
-          actionArgs: _.omit(hook.args, ['bp', 'event'])
-        },
-        event
-      )
-    }
-
-    addStepToEvent(event, StepScopes.Hook, hookName, status)
-  }
-
-  private async runWithoutVm(hookScript: HookScript, hook: Hooks.BaseHook, botId: string, _require: Function) {
+  private async runWithoutVm(hookScript: HookScript, hook: Hooks.BaseHook, _require: Function) {
     const args = {
       ...hook.args,
       process: UntrustedSandbox.getSandboxProcessArgs(),
@@ -309,15 +207,13 @@ export class HookService {
     try {
       const fn = new Function(...Object.keys(args), hookScript.code)
       await fn(...Object.values(args))
-      this.addEventStep(hookScript.name, StepStatus.Completed, hook)
       return
     } catch (err) {
-      this.addEventStep(hookScript.name, StepStatus.Error, hook, err)
-      this.logScriptError(err, botId, hookScript.path, hook.folder)
+      this.logScriptError(err, hookScript.path, hook.folder)
     }
   }
 
-  private async runInVm(hookScript: HookScript, hook: Hooks.BaseHook, botId: string, _require: Function) {
+  private async runInVm(hookScript: HookScript, hook: Hooks.BaseHook, _require: Function) {
     const modRequire = new Proxy(
       {},
       {
@@ -342,28 +238,17 @@ export class HookService {
 
     const vmRunner = new VmRunner()
 
-    await vmRunner
-      .runInVm(vm, hookScript.code, hookScript.path)
-      .then(() => this.addEventStep(hookScript.name, 'completed', hook))
-      .catch(err => {
-        this.addEventStep(hookScript.name, 'error', hook, err)
-        this.logScriptError(err, botId, hookScript.path, hook.folder)
+    await vmRunner.runInVm(vm, hookScript.code, hookScript.path).catch(err => {
+      this.logScriptError(err, hookScript.path, hook.folder)
 
-        if (hook.options.throwOnError) {
-          throw err
-        }
-      })
+      if (hook.options.throwOnError) {
+        throw err
+      }
+    })
   }
 
-  private logScriptError(err: Error, botId: string, path: string, folder: string) {
+  private logScriptError(err: Error, path: string, folder: string) {
     const message = `An error occurred on "${path}" on "${folder}". ${err}`
-    if (botId) {
-      this.logger
-        .forBot(botId)
-        .attachError(err)
-        .error(message)
-    } else {
-      this.logger.attachError(err).error(message)
-    }
+    this.logger.attachError(err).error(message)
   }
 }

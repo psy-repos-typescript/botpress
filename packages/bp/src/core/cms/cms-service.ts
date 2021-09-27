@@ -1,3 +1,4 @@
+import { getRuntime } from '@botpress/runtime'
 import { ContentElement, ContentType, CustomContentType, IO, KnexExtended, Logger, SearchParams } from 'botpress/sdk'
 import { GhostService } from 'core/bpfs'
 import { ConfigProvider } from 'core/config'
@@ -411,6 +412,7 @@ export class CMSService implements IDisposeOnExit {
     }
 
     await this._writeElementsToFile(botId, contentTypeId)
+
     return contentElementId
   }
 

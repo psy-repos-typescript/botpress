@@ -1,3 +1,4 @@
+import { getRuntime } from '@botpress/runtime'
 import { BotConfig, Logger, Stage, WorkspaceUserWithAttributes } from 'botpress/sdk'
 import cluster from 'cluster'
 import { BotHealth, ServerHealth } from 'common/typings'
@@ -579,8 +580,9 @@ export class BotService {
       await this._extractLibsToDisk(botId)
       await this._extractBotNodeModules(botId)
 
-      const api = await createForGlobalHooks()
-      await this.hookService.executeHook(new Hooks.AfterBotMount(api, botId))
+      const runtime = await getRuntime()
+      runtime.mountBot(botId)
+
       BotService._mountedBots.set(botId, true)
       await studioActions.setBotMountStatus(botId, true)
 
@@ -613,8 +615,8 @@ export class BotService {
     await this.moduleLoader.unloadModulesForBot(botId)
     await this.messagingService.unloadMessagingForBot(botId)
 
-    const api = await createForGlobalHooks()
-    await this.hookService.executeHook(new Hooks.AfterBotUnmount(api, botId))
+    const runtime = await getRuntime()
+    runtime.unmountBot(botId)
 
     BotService._mountedBots.set(botId, false)
     await studioActions.setBotMountStatus(botId, false)
