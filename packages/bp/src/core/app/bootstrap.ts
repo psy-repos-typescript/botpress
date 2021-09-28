@@ -11,10 +11,9 @@ import { ModuleLoader, ModuleResolver, ModuleResourceLoader } from 'core/modules
 import fs from 'fs'
 import { AppLifecycle, AppLifecycleEvents } from 'lifecycle'
 import _ from 'lodash'
-import { setupMasterNode, setupWebWorker, setupRuntimeWorker, WorkerType } from 'orchestrator'
+import { setupMasterNode, setupWebWorker, WorkerType } from 'orchestrator'
 import os from 'os'
 import { showBanner } from './banner'
-import { enabled } from 'core/user-code/utils'
 
 async function setupEnv(app: BotpressApp) {
   await app.database.initialize()
@@ -109,33 +108,6 @@ async function prepareLocalModules(app: BotpressApp, logger: sdk.Logger) {
   await app.ghost.root().syncDatabaseFilesToDisk('modules')
 }
 
-async function startRuntime(app: BotpressApp, logger: sdk.Logger) {
-  setupRuntimeWorker()
-
-  // If there is no CORE_PORT, then we must disable all modules (except builtins one)
-  if (!process.env.CORE_PORT) {
-    const globalConfig = await app.config.getBotpressConfig()
-    const modules = _.uniqBy(globalConfig.modules, x => x.location).map(x => x.location.replace('MODULES_ROOT/', ''))
-
-    for (const mod of modules) {
-      const mrl = new ModuleResourceLoader(logger, mod, app.ghost)
-      await mrl.disableResources()
-    }
-  }
-
-  showBanner({ title: 'Botpress Runtime', version: sdk.version, logScopeLength: 9, bannerWidth: 75, logger })
-
-  await app.botpress.start({ modules: [] }).catch(err => {
-    logger.attachError(err).error('Error starting Botpress')
-
-    if (!process.IS_FAILSAFE) {
-      process.exit(1)
-    }
-  })
-
-  logger.info(`Runtime is listening at: ${process.LOCAL_URL}`)
-}
-
 async function start() {
   const loggerProvider = createLoggerProvider()
   if (cluster.isMaster) {
@@ -163,10 +135,6 @@ async function start() {
   await setupEnv(app)
 
   const logger = await getLogger(app.logger, 'Launcher')
-
-  // if (process.IS_RUNTIME) {
-  //   return startRuntime(app, logger)
-  // }
 
   setupWebWorker()
 

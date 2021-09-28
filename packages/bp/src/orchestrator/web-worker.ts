@@ -2,11 +2,10 @@ import cluster from 'cluster'
 import { container } from 'core/app/inversify/app.inversify'
 import { HTTPServer } from 'core/app/server'
 import { TYPES } from 'core/types'
-import { requestRuntimeStartup } from 'orchestrator'
+
 import { MessageType, onProcessExit, WorkerType, ProcType } from './master'
 import { killMessagingProcess } from './messaging-server'
 import { killNluProcess } from './nlu-server'
-import { initRuntimeClient, removeRuntimeClient } from './runtime-client'
 import { initStudioClient, killStudioProcess } from './studio-client'
 
 const debug = DEBUG('orchestrator:web')
@@ -30,24 +29,12 @@ export const setupWebWorker = () => {
   process.on('message', async (message: { type: any; processType: ProcType; port: number; workerId: number }) => {
     const { type, processType, port, workerId } = message
 
-    if (type === MessageType.BroadcastProcessKilled && processType === 'runtime') {
-      removeRuntimeClient(workerId)
-
-      return
-    }
-
     if (type !== MessageType.BroadcastProcess) {
       return
     }
 
     switch (processType) {
       case 'web':
-        if (process.RUNTIME_COUNT) {
-          for (let i = 0; i < process.RUNTIME_COUNT; i++) {
-            requestRuntimeStartup(port)
-          }
-        }
-
         // Once the web worker is registered, we have all we need to start the studio
         process.send!({
           type: MessageType.StartStudio,
@@ -65,9 +52,6 @@ export const setupWebWorker = () => {
         await httpServer.setupStudioProxy()
 
         initStudioClient()
-        break
-      case 'runtime':
-        initRuntimeClient(port, workerId)
         break
       case 'messaging':
         process.MESSAGING_PORT = port

@@ -10,7 +10,6 @@ import { setDebugScopes } from '../debug'
 import { registerActionServerMainHandler } from './action-server'
 import { registerMessagingServerMainHandler } from './messaging-server'
 import { registerNluServerMainHandler } from './nlu-server'
-import { registerRuntimeMainHandler } from './runtime-client'
 import { registerStudioMainHandler } from './studio-client'
 import { spawnWebWorker, onWebWorkerExit } from './web-worker'
 
@@ -167,7 +166,6 @@ export const setupMasterNode = (logger: sdk.Logger) => {
     registerNluServerMainHandler(logger)
     registerStudioMainHandler(logger)
     registerMessagingServerMainHandler(logger)
-    registerRuntimeMainHandler(logger)
   }
 
   registerMsgHandler(MessageType.RestartServer, (_message, worker) => {
