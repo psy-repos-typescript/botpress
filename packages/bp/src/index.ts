@@ -61,9 +61,6 @@ process.stderr.write = stripDeprecationWrite
 
 process.on('unhandledRejection', err => {
   global.printErrorDefault(err)
-  if (!process.IS_FAILSAFE) {
-    process.exit(1)
-  }
 })
 
 process.on('uncaughtException', err => {
@@ -133,7 +130,6 @@ try {
         }
       },
       argv => {
-        process.RUNTIME_COUNT = process.env.RUNTIME_COUNT !== undefined ? Number(process.env.RUNTIME_COUNT) : 0
         process.IS_RUNTIME = process.env.IS_RUNTIME !== undefined ? yn(process.env.IS_RUNTIME) : yn(argv.runtime)
         process.IS_PRODUCTION = argv.production || yn(process.env.BP_PRODUCTION) || yn(process.env.CLUSTER_ENABLED)
 

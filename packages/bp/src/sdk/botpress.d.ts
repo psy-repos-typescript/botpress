@@ -98,7 +98,7 @@ declare module 'botpress/sdk' {
 
   export interface Logger {
     forBot(botId: string): this
-    attachError(error: Error): this
+    attachError(error: unknown): this
     /**
      * Attaching an event to the log entry will display the associated logs in the Processing tab on the debugger
      */
@@ -938,6 +938,10 @@ declare module 'botpress/sdk' {
      * if not set, seed is computed from botId
      */
     nluSeed?: number
+    nluModels?: {
+      [lang: string]: string
+    }
+
     qna: {
       disabled: boolean
     }

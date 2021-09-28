@@ -106,20 +106,17 @@ export class InternalRouter extends CustomRouter {
     router.post(
       '/invalidateFile',
       this.asyncMiddleware(async (req, res) => {
-        const { key } = req.body
-        await this.objectCache.invalidate(key, true)
-
+        const { botId } = req.body
+        await this.botService.onBotCreation(botId)
         res.sendStatus(200)
       })
     )
 
     router.post(
-      '/checkForDirtyModels',
+      '/invalidateFile',
       this.asyncMiddleware(async (req, res) => {
-        const { botId } = req.body
-
-        const axiosConfig = await this.httpServer.getAxiosConfigForBot(botId, { localUrl: true })
-        await axios.post('/mod/nlu/checkForDirtyModels', { botId }, axiosConfig)
+        const { key } = req.body
+        await this.objectCache.invalidate(key, true)
 
         res.sendStatus(200)
       })
@@ -143,20 +140,11 @@ export class InternalRouter extends CustomRouter {
     )
 
     router.post(
-      '/sendEvent',
+      '/notifyTrainUpdate',
       this.asyncMiddleware(async (req, res) => {
-        await this.eventEngine.sendEvent(new IOEvent(req.body))
-        res.sendStatus(200)
-      })
-    )
-
-    router.post(
-      '/emitBotpressEvent',
-      this.asyncMiddleware(async (req, res) => {
-        const { event, args } = req.body
-        process.BOTPRESS_EVENTS.emit(event, args)
-
-        res.sendStatus(200)
+        const { body } = req
+        this.realtime.sendToSocket(RealTimePayload.forAdmins('statusbar.event', body))
+        return res.sendStatus(200)
       })
     )
   }
