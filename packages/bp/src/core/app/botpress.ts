@@ -125,9 +125,9 @@ export class Botpress {
     this.displayRedisChannelPrefix()
     await this.restoreDebugScope()
     await this.checkJwtSecret()
+    await this.loadModules(options.modules)
 
     if (!process.IS_RUNTIME) {
-      await this.loadModules(options.modules)
       await this.migrationService.initialize()
       await this.cleanDisabledModules()
     }
@@ -136,11 +136,12 @@ export class Botpress {
 
     if (!process.IS_RUNTIME) {
       await this.checkEditionRequirements()
-      await this.deployAssets()
+
       await this.maybeStartLocalSTAN()
-      await this.startRealtime()
     }
 
+    await this.deployAssets()
+    await this.startRealtime()
     await this.startServer()
 
     if (!process.IS_RUNTIME) {

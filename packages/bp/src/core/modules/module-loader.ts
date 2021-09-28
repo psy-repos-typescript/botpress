@@ -315,10 +315,6 @@ export class ModuleLoader {
   }
 
   public async loadModulesForBot(botId: string) {
-    if (process.IS_RUNTIME) {
-      return
-    }
-
     const modules = this.getLoadedModules()
     for (const module of modules) {
       try {

@@ -365,8 +365,9 @@ export class HTTPServer {
       res.send(process.BOTPRESS_VERSION)
     })
 
+    this.setupUILite(this.app)
+
     if (!process.IS_RUNTIME) {
-      this.setupUILite(this.app)
       this.adminRouter.setupRoutes(this.app)
     }
 
@@ -378,15 +379,16 @@ export class HTTPServer {
 
     await this.botsRouter.setupRoutes(this.app)
 
-    if (!process.IS_RUNTIME) {
-      this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
+    this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
 
+    if (!process.IS_RUNTIME) {
       this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
       this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
       this.app.use(`${BASE_API_PATH}/telemetry`, this.telemetryRouter.router)
       this.app.use(`${BASE_API_PATH}/media`, this.mediaRouter.router)
-      this.app.use('/s', this.shortLinksRouter.router)
     }
+
+    this.app.use('/s', this.shortLinksRouter.router)
 
     this.app.use((err, _req, _res, next) => {
       if (err instanceof UnlicensedError) {

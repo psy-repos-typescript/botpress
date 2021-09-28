@@ -36,6 +36,10 @@ const http = (httpServer: HTTPServer) => (identity: string): typeof sdk.http => 
     deleteShortLink(name: string): void {
       httpServer.deleteShortLink(name)
     },
+    createRouterForBot(routerName: string, options?: sdk.RouterOptions): any & sdk.http.RouterExtension {
+      const defaultRouterOptions = { checkAuthentication: true, enableJsonBodyParser: true }
+      return httpServer.createRouterForBot(routerName, identity, options || defaultRouterOptions)
+    },
     getAxiosConfigForBot: httpServer.getAxiosConfigForBot.bind(httpServer),
     extractExternalToken: httpServer.extractExternalToken.bind(httpServer),
     decodeExternalToken: httpServer.decodeExternalToken.bind(httpServer),
@@ -74,6 +78,8 @@ const dialog = (
 
 const config = (moduleLoader: ModuleLoader, configProvider: ConfigProvider): typeof sdk.config => {
   return {
+    getModuleConfig: moduleLoader.configReader.getGlobal.bind(moduleLoader.configReader),
+    getModuleConfigForBot: moduleLoader.configReader.getForBot.bind(moduleLoader.configReader),
     getBotpressConfig: configProvider.getBotpressConfig.bind(configProvider)
   }
 }

@@ -1748,6 +1748,19 @@ declare module 'botpress/runtime-sdk' {
     export function deleteShortLink(name): void
 
     /**
+     * Create a new router for a module. Once created, use them to register new endpoints. Routers created
+     * with this method are accessible via the url /mod/{routerName}
+     *
+     * @example const router = bp.http.createRouterForBot('myModule')
+     * @example router.get('/list', ...)
+     * @example axios.get('/mod/myModule/list')
+     * @param routerName - The name of the router
+     * @param options - Additional options to apply to the router
+     * @param router - The router
+     */
+    export function createRouterForBot(routerName: string, options?: RouterOptions): RouterExtension
+
+    /**
      * Returns the required configuration to make an API call to another module by specifying only the relative path.
      * @param botId - The ID of the bot for which to get the configuration
      * @returns The configuration to use
@@ -1922,6 +1935,15 @@ declare module 'botpress/runtime-sdk' {
   }
 
   export namespace config {
+    export function getModuleConfig(moduleId: string): Promise<any>
+
+    /**
+     * Returns the configuration values for the specified module and bot.
+     * @param moduleId
+     * @param botId
+     * @param ignoreGlobal Enable this when you want only bot-specific configuration to be possible
+     */
+    export function getModuleConfigForBot(moduleId: string, botId: string, ignoreGlobal?: boolean): Promise<any>
     /**
      * Returns the configuration options of Botpress
      */

@@ -14,6 +14,7 @@ import _ from 'lodash'
 import { setupMasterNode, setupWebWorker, setupRuntimeWorker, WorkerType } from 'orchestrator'
 import os from 'os'
 import { showBanner } from './banner'
+import { enabled } from 'core/user-code/utils'
 
 async function setupEnv(app: BotpressApp) {
   await app.database.initialize()
@@ -163,9 +164,9 @@ async function start() {
 
   const logger = await getLogger(app.logger, 'Launcher')
 
-  if (process.IS_RUNTIME) {
-    return startRuntime(app, logger)
-  }
+  // if (process.IS_RUNTIME) {
+  //   return startRuntime(app, logger)
+  // }
 
   setupWebWorker()
 
@@ -173,8 +174,13 @@ async function start() {
 
   const globalConfig = await app.config.getBotpressConfig()
   const modules = _.uniqBy(globalConfig.modules, x => x.location)
-  const enabledModules = modules.filter(m => m.enabled)
-  const disabledModules = modules.filter(m => !m.enabled)
+  let enabledModules = modules.filter(m => m.enabled)
+  let disabledModules = modules.filter(m => !m.enabled)
+
+  if (process.IS_RUNTIME) {
+    enabledModules = modules.filter(m => m.location.endsWith('channel-web'))
+    disabledModules = []
+  }
 
   const resolver = new ModuleResolver(logger)
 
@@ -189,7 +195,8 @@ async function start() {
     process.LOADED_MODULES[loadedModule.entryPoint.definition.name] = loadedModule.moduleLocation
   }
 
-  showBanner({ title: 'Botpress Server', version: sdk.version, logScopeLength: 9, bannerWidth: 75, logger })
+  const title = process.IS_RUNTIME ? 'Botpress Runtime' : 'Botpress Server'
+  showBanner({ title, version: sdk.version, logScopeLength: 9, bannerWidth: 75, logger })
 
   if (!fs.existsSync(process.APP_DATA_PATH)) {
     try {
