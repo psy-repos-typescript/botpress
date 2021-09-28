@@ -364,17 +364,14 @@ export class HTTPServer {
 
     this.setupUILite(this.app)
     this.adminRouter.setupRoutes(this.app)
-
-    this.messagingRouter.setupRoutes()
-    this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
-
-    this.internalRouter.setupRoutes()
-    this.app.use('/api/internal', this.internalRouter.router)
-
     await this.botsRouter.setupRoutes(this.app)
+    this.internalRouter.setupRoutes()
+    this.messagingRouter.setupRoutes()
 
     this.app.use('/assets', this.guardWhiteLabel(), express.static(resolveAsset('')))
 
+    this.app.use('/api/internal', this.internalRouter.router)
+    this.app.use(`${BASE_API_PATH}/chat`, this.messagingRouter.router)
     this.app.use(`${BASE_API_PATH}/modules`, this.modulesRouter.router)
     this.app.use(`${BASE_API_PATH}/sdk`, this.sdkApiRouter.router)
     this.app.use(`${BASE_API_PATH}/telemetry`, this.telemetryRouter.router)
@@ -512,7 +509,6 @@ export class HTTPServer {
 
   async getAxiosConfigForBot(botId: string, options?: AxiosOptions): Promise<AxiosBotConfig> {
     const basePath = options?.localUrl ? process.LOCAL_URL : process.EXTERNAL_URL
-
     const serverToken = generateUserToken({
       email: SERVER_USER,
       strategy: SERVER_USER_STRATEGY,

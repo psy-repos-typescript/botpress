@@ -1,6 +1,5 @@
 import { DirectoryListingOptions, ListenHandle, Logger } from 'botpress/runtime-sdk'
 import { ObjectCache } from 'common/object-cache'
-import { isValidBotId } from 'common/validation'
 import { EventEmitter2 } from 'eventemitter2'
 import { inject, injectable, tagged } from 'inversify'
 import jsonlintMod from 'jsonlint-mod'
@@ -109,10 +108,6 @@ export class GhostService {
   }
 
   forBot(botId: string): ScopedGhostService {
-    if (!isValidBotId(botId)) {
-      throw new Error(`Invalid botId "${botId}"`)
-    }
-
     if (this._scopedGhosts.has(botId)) {
       return this._scopedGhosts.get(botId)!
     }

@@ -10,7 +10,13 @@ import { BotpressConfig, ConfigProvider } from 'core/config'
 import Database from 'core/database'
 import { EventEngine } from 'core/events'
 import { AlertingService, MonitoringService } from 'core/health'
-import { LoggerDbPersister, LoggerFilePersister, LoggerProvider, LogsJanitor } from 'core/logger'
+import {
+  LoggerDbPersister,
+  LoggerFilePersister,
+  LoggerProvider,
+  LogsJanitor,
+  PersistedConsoleLogger
+} from 'core/logger'
 import { MessagingService } from 'core/messaging'
 import { MigrationService } from 'core/migration'
 import { copyDir } from 'core/misc/pkg-fs'
@@ -155,8 +161,12 @@ export class Botpress {
       'noRepeatPolicy'
     ]) as any
 
+    const { MESSAGING_ENDPOINT } = process.core_env
+    const messagingEndpoint = MESSAGING_ENDPOINT || `http:/localhost:${process.MESSAGING_PORT}`
+
     const opt = {
       config: runtimeConfig,
+      messagingEndpoint,
       dataFolder: process.PROJECT_LOCATION,
       api: {
         hooks: await createForGlobalHooks(),
@@ -164,7 +174,7 @@ export class Botpress {
       },
       middlewares: await this.eventEngine.getMiddlewares(),
       bots,
-      logStreamEmitter: undefined
+      logStreamEmitter: PersistedConsoleLogger.LogStreamEmitter
     }
 
     await getRuntime(opt)

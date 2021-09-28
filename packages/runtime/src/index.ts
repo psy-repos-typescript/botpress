@@ -12,7 +12,8 @@ export interface RuntimeSetup {
     actions: any
   }
   // Optional emitter to send logs to a user
-  logStreamEmitter
+  logStreamEmitter: any
+  messagingEndpoint?: any
 }
 
 let runtime

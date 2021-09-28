@@ -3,7 +3,6 @@ import { BotpressAPIProvider } from 'core/app/api'
 import { Botpress } from 'core/app/botpress'
 import { HTTPServer } from 'core/app/server'
 import { ConfigProvider } from 'core/config'
-import { EventCollector } from 'core/events'
 import { LoggerDbPersister, LoggerFilePersister, LoggerProvider, PersistedConsoleLogger } from 'core/logger'
 import { MigrationService } from 'core/migration'
 import { ModuleLoader } from 'core/modules'
@@ -101,11 +100,6 @@ container
 container
   .bind<WorkspaceService>(TYPES.WorkspaceService)
   .to(WorkspaceService)
-  .inSingletonScope()
-
-container
-  .bind<EventCollector>(TYPES.EventCollector)
-  .to(EventCollector)
   .inSingletonScope()
 
 container

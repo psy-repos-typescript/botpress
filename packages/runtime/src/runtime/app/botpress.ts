@@ -17,7 +17,14 @@ import { StateManager, DecisionEngine, DialogEngine, DialogJanitor, WellKnownFla
 import { SessionIdFactory } from 'runtime/dialog/sessions'
 import { addStepToEvent, EventCollector, StepScopes, StepStatus, EventEngine, Event, IOEvent } from 'runtime/events'
 import { AppLifecycle, AppLifecycleEvents } from 'runtime/lifecycle'
-import { LoggerDbPersister, LoggerFilePersister, LoggerProvider, LogsJanitor } from 'runtime/logger'
+import {
+  LoggerDbPersister,
+  LoggerFilePersister,
+  LoggerProvider,
+  LogsJanitor,
+  PersistedConsoleLogger
+} from 'runtime/logger'
+import { MessagingService } from 'runtime/messaging'
 import { QnaService } from 'runtime/qna'
 import { ActionService, Hooks, HookService } from 'runtime/user-code'
 import { getDebugScopes, setDebugScopes } from '../../debug'
@@ -57,7 +64,8 @@ export class Botpress {
     @inject(TYPES.BotMonitoringService) private botMonitor: BotMonitoringService,
     @inject(TYPES.QnaService) private qnaService: QnaService,
     @inject(TYPES.FlowService) private flowService: FlowService,
-    @inject(TYPES.ActionService) private actionService: ActionService
+    @inject(TYPES.ActionService) private actionService: ActionService,
+    @inject(TYPES.MessagingService) private messagingService: MessagingService
   ) {}
 
   private _refreshBot = async (botId: string) => {
@@ -106,9 +114,15 @@ export class Botpress {
       options = {
         bots
       } as any
+
+      await this.startServer()
     } else {
       this.configProvider.setRuntimeConfig(options.config)
       this.config = options.config
+
+      if (options.logStreamEmitter) {
+        PersistedConsoleLogger.LogStreamEmitter = options.logStreamEmitter
+      }
     }
 
     setDebugScopes(process.core_env.DEBUG || (process.IS_PRODUCTION ? '' : 'bp:dialog'))
@@ -129,10 +143,9 @@ export class Botpress {
     }
 
     await this.restoreDebugScope()
-    await this.initializeServices()
+    await this.initializeServices(options)
 
     await this.discoverBots(options.bots)
-    await this.startServer()
 
     AppLifecycle.setDone(AppLifecycleEvents.BOTPRESS_READY)
   }
@@ -159,7 +172,7 @@ export class Botpress {
     await Promise.map(botsToMount, botId => this.botService.mountBot(botId), { concurrency: maxConcurrentMount })
   }
 
-  private async initializeServices() {
+  private async initializeServices(options: RuntimeSetup) {
     await this.loggerDbPersister.initialize(this.database, await this.loggerProvider('LogDbPersister'))
     this.loggerDbPersister.start()
 
@@ -168,6 +181,7 @@ export class Botpress {
     await this.cmsService.initialize()
     await this.eventCollector.initialize(this.database)
     await this.qnaService.initialize()
+    await this.messagingService.initialize(options.messagingEndpoint)
 
     this.eventEngine.onBeforeIncomingMiddleware = async (event: sdk.IO.IncomingEvent) => {
       await this.stateManager.restore(event)

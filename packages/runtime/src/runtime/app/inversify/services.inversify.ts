@@ -9,6 +9,7 @@ import { CEJobService, JobService } from 'runtime/distributed'
 import { EventEngine, Queue, MemoryQueue } from 'runtime/events'
 import { KeyValueStore } from 'runtime/kvs'
 import { LogsJanitor } from 'runtime/logger'
+import { MessagingService } from 'runtime/messaging'
 import { QnaService } from 'runtime/qna'
 
 import { HookService, ActionService } from 'runtime/user-code'
@@ -31,6 +32,10 @@ const ServicesContainerModule = new ContainerModule((bind: interfaces.Bind) => {
 
   bind<BotMonitoringService>(TYPES.BotMonitoringService)
     .to(BotMonitoringService)
+    .inSingletonScope()
+
+  bind<MessagingService>(TYPES.MessagingService)
+    .to(MessagingService)
     .inSingletonScope()
 
   bind<Queue<IO.IncomingEvent>>(TYPES.IncomingQueue).toDynamicValue((context: interfaces.Context) => {

@@ -119,7 +119,7 @@ try {
         process.VERBOSITY_LEVEL = argv.verbose ? Number(argv.verbose) : defaultVerbosity
 
         process.distro = await getos()
-        console.log('Starting')
+
         const { start } = require('./runtime/app/bootstrap')
 
         await start()

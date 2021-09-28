@@ -1,24 +1,23 @@
 import bodyParser from 'body-parser'
 import { Logger } from 'botpress/sdk'
 import compression from 'compression'
-
 import cors from 'cors'
 import errorHandler from 'errorhandler'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import { createServer, Server } from 'http'
-import { inject, injectable, postConstruct, tagged } from 'inversify'
+import { inject, injectable, tagged } from 'inversify'
 import _ from 'lodash'
 import ms from 'ms'
-
 import portFinder from 'portfinder'
 import { TYPES } from 'runtime/app/types'
-
 import { ConfigProvider } from 'runtime/config'
 import { ConverseService } from 'runtime/converse'
 import { EventEngine, EventRepository } from 'runtime/events'
 import { AppLifecycle, AppLifecycleEvents } from 'runtime/lifecycle'
+import { MessagingRouter, MessagingService } from 'runtime/messaging'
 import yn from 'yn'
+
 import { debugRequestMw } from './server-utils'
 
 @injectable()
@@ -26,6 +25,7 @@ export class HTTPServer {
   public httpServer!: Server
   public readonly app: express.Express
   private isBotpressReady = false
+  private messagingRouter!: MessagingRouter
 
   constructor(
     @inject(TYPES.ConfigProvider) private configProvider: ConfigProvider,
@@ -34,7 +34,8 @@ export class HTTPServer {
     private logger: Logger,
     @inject(TYPES.EventEngine) private eventEngine: EventEngine,
     @inject(TYPES.EventRepository) private eventRepo: EventRepository,
-    @inject(TYPES.ConverseService) private converseService: ConverseService
+    @inject(TYPES.ConverseService) private converseService: ConverseService,
+    @inject(TYPES.MessagingService) private messaging: MessagingService
   ) {
     this.app = express()
 
@@ -54,10 +55,7 @@ export class HTTPServer {
     }
   }
 
-  @postConstruct()
-  async initialize() {
-    await AppLifecycle.waitFor(AppLifecycleEvents.CONFIGURATION_LOADED)
-
+  async start() {
     const app = express()
     app.use('/', this.app)
     this.httpServer = createServer(app)
@@ -66,9 +64,7 @@ export class HTTPServer {
     AppLifecycle.waitFor(AppLifecycleEvents.BOTPRESS_READY).then(() => {
       this.isBotpressReady = true
     })
-  }
 
-  async start() {
     const botpressConfig = await this.configProvider.getRuntimeConfig()
     const config = botpressConfig.httpServer || ({} as any)
 
@@ -107,11 +103,15 @@ export class HTTPServer {
       )
     }
 
-    this.app.post('/sendEvent', async (req, res, next) => {
-      await this.eventEngine.sendEvent(req.body)
-      res.sendStatus(200)
-    })
+    this.messagingRouter = new MessagingRouter(this.logger, this.messaging, this)
+    this.messagingRouter.setupRoutes(this.app)
 
+    this.app.use('/api/v1/chat', this.messagingRouter.router)
+
+    // Import bot
+    // delete bot
+
+    // Will disappear
     this.app.post('/converse/:botId/sendMessage/:userId', async (req, res, next) => {
       const { userId, botId } = req.params
 

@@ -10,7 +10,6 @@ import { setDebugScopes } from '../debug'
 import { registerActionServerMainHandler } from './action-server'
 import { registerMessagingServerMainHandler } from './messaging-server'
 import { registerNluServerMainHandler } from './nlu-server'
-import { registerRuntimeMainHandler } from './runtime-client'
 import { registerStudioMainHandler } from './studio-client'
 import { spawnWebWorker, onWebWorkerExit } from './web-worker'
 
@@ -18,8 +17,7 @@ export enum WorkerType {
   WEB = 'WEB_WORKER',
   LOCAL_ACTION_SERVER = 'LOCAL_ACTION_SERVER',
   LOCAL_STAN_SERVER = 'LOCAL_STAN_SERVER',
-  TRAINING = 'TRAINING',
-  RUNTIME = 'RUNTIME'
+  TRAINING = 'TRAINING'
 }
 
 export enum MessageType {
@@ -31,8 +29,7 @@ export enum MessageType {
   BroadcastProcess = 'BROADCAST_PROCESS',
   BroadcastProcessKilled = 'BROADCAST_PROCESS_KILLED',
   RestartServer = 'RESTART_SERVER',
-  UpdateDebugScopes = 'UPDATE_DEBUG_SCOPES',
-  StartRuntime = 'START_RUNTIME'
+  UpdateDebugScopes = 'UPDATE_DEBUG_SCOPES'
 }
 
 export type ProcType = 'web' | 'nlu' | 'action-server' | 'studio' | 'messaging' | 'runtime'
@@ -166,7 +163,6 @@ export const setupMasterNode = (logger: sdk.Logger) => {
   registerNluServerMainHandler(logger)
   registerStudioMainHandler(logger)
   registerMessagingServerMainHandler(logger)
-  registerRuntimeMainHandler(logger)
 
   registerMsgHandler(MessageType.RestartServer, (_message, worker) => {
     logger.warn('Restarting server...')

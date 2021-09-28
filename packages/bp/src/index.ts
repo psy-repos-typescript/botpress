@@ -1,4 +1,4 @@
-import { EventEmitter2 } from 'eventemitter2'
+import { EventEmitter } from 'events'
 
 global['NativePromise'] = global.Promise
 
@@ -46,7 +46,7 @@ if (process.env.APP_DATA_PATH) {
 }
 
 process.IS_FAILSAFE = yn(process.env.BP_FAILSAFE)
-process.BOTPRESS_EVENTS = new EventEmitter2()
+process.BOTPRESS_EVENTS = new EventEmitter()
 process.BOTPRESS_EVENTS.setMaxListeners(1000)
 global.BOTPRESS_CORE_EVENT = (event, args) => {
   process.BOTPRESS_EVENTS.emit(event, args)
@@ -124,7 +124,6 @@ try {
         }
       },
       argv => {
-        process.RUNTIME_COUNT = process.env.RUNTIME_COUNT !== undefined ? Number(process.env.RUNTIME_COUNT) : 0
         process.IS_PRODUCTION = argv.production || yn(process.env.BP_PRODUCTION) || yn(process.env.CLUSTER_ENABLED)
 
         process.AUTO_MIGRATE =

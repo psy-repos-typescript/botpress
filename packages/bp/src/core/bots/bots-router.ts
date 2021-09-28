@@ -65,6 +65,9 @@ export class BotsRouter extends CustomRouter {
     this.router.use(checkBotVisibility(this.configProvider, this.checkTokenHeader))
 
     this.router.use('/converse', this.converseRouter.router)
+    this.router.use('/nlu', this.nluRouter.router)
+    this.router.use('/messaging', this.messagingRouter.router)
+    this.router.use('/qna', this.qnaRouter.router)
 
     this.router.get(
       '/media/:filename',
@@ -86,10 +89,6 @@ export class BotsRouter extends CustomRouter {
           .send(contents)
       })
     )
-
-    this.router.use('/nlu', this.nluRouter.router)
-    this.router.use('/messaging', this.messagingRouter.router)
-    this.router.use('/qna', this.qnaRouter.router)
 
     this.router.get(
       '/',
