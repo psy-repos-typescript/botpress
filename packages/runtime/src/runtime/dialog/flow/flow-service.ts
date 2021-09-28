@@ -1,5 +1,5 @@
-import { ArrayCache } from '@botpress/common/lib/array-cache'
 import { Flow, Logger } from 'botpress/sdk'
+import { ArrayCache } from 'common/array-cache'
 import { FlowView, NodeView } from 'common/typings'
 import { inject, injectable, tagged } from 'inversify'
 import _ from 'lodash'

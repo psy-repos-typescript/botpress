@@ -1,5 +1,5 @@
-import { extractArchive } from '@botpress/common/lib/archive'
 import { BotConfig, Logger } from 'botpress/sdk'
+import { extractArchive } from 'common/archive'
 import { BotHealth, ServerHealth } from 'common/typings'
 import { inject, injectable, postConstruct, tagged } from 'inversify'
 import _ from 'lodash'

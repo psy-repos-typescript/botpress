@@ -6,6 +6,7 @@ import _ from 'lodash'
 import path from 'path'
 import { TYPES } from 'runtime/types'
 
+import AllTables from './database-tables'
 import { patchKnex } from './helpers'
 import { Table } from './interfaces'
 
@@ -23,8 +24,32 @@ export default class Database {
     private logger: Logger
   ) {}
 
+  async bootstrap() {
+    await Promise.mapSeries(AllTables, async Tbl => {
+      const table = new Tbl(this.knex!)
+      const created = await table.bootstrap()
+      if (created) {
+        this.logger.debug(`Created table '${table.name}'`)
+      }
+      this.tables.push(table)
+    })
+  }
+
   async seedForTests() {
     // Add seeding here
+  }
+
+  async teardownTables() {
+    await Promise.mapSeries(AllTables, async Tbl => {
+      const table = new Tbl(this.knex!)
+      if (this.knex.isLite) {
+        await this.knex.raw('PRAGMA foreign_keys = OFF;')
+        await this.knex.raw(`DROP TABLE IF EXISTS "${table.name}";`)
+        await this.knex.raw('PRAGMA foreign_keys = ON;')
+      } else {
+        await this.knex.raw(`DROP TABLE IF EXISTS "${table.name}" CASCADE;`)
+      }
+    })
   }
 
   async initialize(databaseType?: DatabaseType, databaseUrl?: string) {
@@ -85,5 +110,7 @@ export default class Database {
     }
 
     this.knex = patchKnex(Knex(config))
+
+    await this.bootstrap()
   }
 }
