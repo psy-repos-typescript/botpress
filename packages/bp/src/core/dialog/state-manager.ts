@@ -66,6 +66,7 @@ export class StateManager {
 
   public async restore(event: sdk.IO.IncomingEvent) {
     const sessionId = SessionIdFactory.createIdFromEvent(event)
+    console.log('DEBUG -> State Manager -> Restoring state for event ', { state: JSON.stringify(event, null, 2) })
 
     if (this.useRedis) {
       try {
@@ -92,6 +93,8 @@ export class StateManager {
     state.temp = (session && session.temp_data) || {}
     state.bot = await this.kvs.forBot(event.botId).get(this.BOT_GLOBAL_KEY)
     state.__stacktrace = []
+
+    console.log('DEBUG -> State Manager -> Restored state ', { state: JSON.stringify(state, null, 2) })
 
     if (!state.workflow) {
       Object.defineProperty(state, 'workflow', {

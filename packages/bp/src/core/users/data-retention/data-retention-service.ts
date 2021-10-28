@@ -43,11 +43,21 @@ export class DataRetentionService {
     afterAttributes: any
   ) {
     const differences = diff(getPaths(beforeAttributes), getPaths(afterAttributes))
+    console.log(
+      'DEBUG -> updateExpirationForChangedFields -> differences :',
+      JSON.stringify({ differences, policies: this.policies }, null, 4)
+    )
+
     if (!differences || !this.policies) {
       return
     }
 
     const changedPaths = _.flatten(differences.filter(diff => diff.kind !== this.DELETED_ATTR).map(diff => diff.path))
+    console.log(
+      'DEBUG -> updateExpirationForChangedFields -> changedPaths :',
+      JSON.stringify({ changedPaths }, null, 4)
+    )
+
     if (!changedPaths.length) {
       return
     }
@@ -65,6 +75,10 @@ export class DataRetentionService {
         }
       }
     }
+
+    const results = this.database.knex(this.tableName).where({ channel, user_id })
+
+    console.log('DEBUG -> updateExpirationForChangedFields -> finalResults :', JSON.stringify({ results }, null, 4))
   }
 
   private async get(channel: string, user_id: string, field_path: string) {

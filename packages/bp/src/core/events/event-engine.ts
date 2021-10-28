@@ -182,6 +182,8 @@ export class EventEngine {
   }
 
   async sendEvent(event: sdk.IO.Event): Promise<void> {
+    console.log('DEBUG -> sendEvent (will not have variables)', { event })
+
     this.validateEvent(event)
 
     if (event.debugger) {

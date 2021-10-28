@@ -187,22 +187,45 @@ export class ChannelUserRepository {
   }
 
   async updateAttributes(channel: string, user_id: string, attributes: any): Promise<void> {
+    console.log(
+      'DEBUG-> updateAttributes -> Start UpdateAttributes ->',
+      JSON.stringify({ channel, user_id, attributes }, null, 4)
+    )
     channel = channel.toLowerCase()
     await this._dataRetentionUpdate(channel, user_id, attributes)
 
     const originalAttributes = await this.getAttributes(channel, user_id)
+
+    console.log('DEBUG-> updateAttributes -> Original Atrributes', JSON.stringify({ originalAttributes }, null, 4))
 
     await this.database
       .knex(this.tableName)
       .update({ attributes: this.database.knex.json.set({ ...originalAttributes, ...attributes }) })
       .where({ channel, user_id })
 
+    const attributesAfter = await this.getAttributes(channel, user_id)
+
+    console.log('DEBUG-> updateAttributes -> Attributes After Update', JSON.stringify({ attributesAfter }, null, 4))
+
     this.broadcastDeleteUserCache(this.getCacheKey(channel, user_id))
+
+    const attributesAfterCacheDelete = await this.getAttributes(channel, user_id)
+
+    console.log(
+      'DEBUG-> updateAttributes -> Attributes After Cache delete',
+      JSON.stringify({ attributesAfterCacheDelete }, null, 4)
+    )
   }
 
   private async _dataRetentionUpdate(channel: string, user_id: string, attributes: any) {
+    console.log('DEBUG-> dataRetentionUpdate Start ->', JSON.stringify({ channel, user_id, attributes }, null, 4))
+    console.log(
+      'DEBUG-> dataRetentionUpdate Has Policy ->',
+      JSON.stringify({ hasPolicy: this.dataRetentionService.hasPolicy() }, null, 4)
+    )
     if (this.dataRetentionService.hasPolicy()) {
       const originalAttributes = await this.getAttributes(channel, user_id)
+      console.log('DEBUG-> dataRetentionUpdate OriginalAttributes ->', JSON.stringify({ originalAttributes }, null, 4))
       await this.dataRetentionService.updateExpirationForChangedFields(channel, user_id, originalAttributes, attributes)
     }
   }
