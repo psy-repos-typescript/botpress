@@ -355,6 +355,12 @@
     display: flex;
     width: 100%;
     .message {
+      width: 100%;
+      & video,
+      & img,
+      & > div {
+        width: 100%;
+      }
       max-width: 300px;
       border: solid 1px var(--bg);
       font-size: 12px;
