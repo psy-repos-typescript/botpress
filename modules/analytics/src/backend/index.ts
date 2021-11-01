@@ -40,6 +40,7 @@ const entryPoint: sdk.ModuleEntryPoint = {
     homepage: 'https://botpress.com',
     menuIcon: 'timeline-line-chart',
     menuText: 'Analytics',
+    noInterface: true,
     workspaceApp: { bots: true }
   }
 }

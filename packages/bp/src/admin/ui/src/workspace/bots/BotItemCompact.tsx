@@ -75,13 +75,13 @@ const BotItemCompact: FC<Props> = props => {
           />
         )}
 
+        <WorkspaceAppItems loadedModules={props.loadedModules} botId={props.bot.id} />
+
         <AccessControl resource="admin.bots.*" operation="read">
           <Popover minimal position={Position.BOTTOM} interactionKind={PopoverInteractionKind.HOVER}>
             <Button id="btn-menu" icon={<Icon icon="menu" />} minimal />
 
             <Menu>
-              <WorkspaceAppItems loadedModules={props.loadedModules} botId={props.bot.id} />
-
               {!props.bot.disabled && !props.hasError && hasStudioAccess && (
                 <MenuItem
                   disabled={props.bot.locked}

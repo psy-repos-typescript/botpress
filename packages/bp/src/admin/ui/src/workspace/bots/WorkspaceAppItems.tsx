@@ -1,4 +1,4 @@
-import { MenuItem, Icon } from '@blueprintjs/core'
+import { Icon, Menu, MenuItem, Popover, PopoverInteractionKind, Position, Button } from '@blueprintjs/core'
 import { IconSvgPaths16 } from '@blueprintjs/icons'
 import { ModuleDefinition } from 'botpress/sdk'
 import { lang } from 'botpress/shared'
@@ -34,17 +34,21 @@ export const WorkspaceAppItems: FC<Props> = ({ botId, loadedModules }) => {
   }
 
   return (
-    <MenuItem icon="application" id="btn-apps" text={lang.tr('admin.apps')}>
-      {modules.map(addModuleIcon).map(module => (
-        <MenuItem
-          id={`btn-menu-${module.name}`}
-          key={module.name}
-          text={lang.tr(`module.${module.name}.fullName`) || module.menuText}
-          icon={module.menuIcon as any}
-          onClick={() => history.push(`/apps/${module.name}/${botId}`)}
-          resource={`module.${module.name}`}
-        />
-      ))}
-    </MenuItem>
+    <Popover minimal position={Position.BOTTOM} interactionKind={PopoverInteractionKind.HOVER}>
+      <Button icon="application" id="btn-apps" text={lang.tr('admin.apps')} minimal />
+
+      <Menu>
+        {modules.map(addModuleIcon).map(module => (
+          <MenuItem
+            id={`btn-menu-${module.name}`}
+            key={module.name}
+            text={lang.tr(`module.${module.name}.fullName`) || module.menuText}
+            icon={module.menuIcon as any}
+            onClick={() => history.push(`/apps/${module.name}/${botId}`)}
+            resource={`module.${module.name}`}
+          />
+        ))}
+      </Menu>
+    </Popover>
   )
 }
