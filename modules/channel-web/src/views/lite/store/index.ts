@@ -55,6 +55,9 @@ class RootStore {
   public preferredLanguage: string
 
   @observable
+  public isRTL: boolean
+
+  @observable
   public isInitialized: boolean
 
   @observable
@@ -110,11 +113,6 @@ class RootStore {
       this.config?.avatarUrl ||
       (this.config.isEmulator && `${window.ROOT_PATH}/assets/modules/channel-web/images/emulator-default.svg`)
     )
-  }
-
-  @computed
-  get rtl(): boolean {
-    return isRTLLocale(this.preferredLanguage)
   }
 
   @computed
@@ -471,6 +469,8 @@ class RootStore {
   @action.bound
   async updatePreferredLanguage(lang: string): Promise<void> {
     this.preferredLanguage = lang
+    console.log('UPDATE PREFERED LANG', lang)
+    this.isRTL = isRTLLocale(lang)
     await this.api.updateUserPreferredLanguage(lang)
   }
 
@@ -508,6 +508,8 @@ class RootStore {
     runInAction('-> setBotUILanguage', () => {
       this.botUILanguage = lang
       this.preferredLanguage = lang
+      console.log('UPDATE PREFERED LANG', lang)
+      this.isRTL = isRTLLocale(lang)
       window.BP_STORAGE?.set('bp/channel-web/user-lang', lang)
     })
   }

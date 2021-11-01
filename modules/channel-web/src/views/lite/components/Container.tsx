@@ -33,7 +33,7 @@ class Container extends React.Component<ContainerProps> {
         <div
           className={classnames('bpw-msg-list-container', {
             'bpw-emulator': this.props.isEmulator,
-            'bpw-rtl': this.props.rtl
+            'bpw-rtl': this.props.isRTL
           })}
         >
           <MessageList />
@@ -77,7 +77,7 @@ export default inject(({ store }: { store: RootStore }) => ({
   isPoweredByDisplayed: store.view.isPoweredByDisplayed,
   config: store.config,
   botName: store.botName,
-  rtl: store.rtl
+  isRTL: store.isRTL
 }))(injectIntl(observer(Container)))
 
 type ContainerProps = { store?: RootStore } & InjectedIntlProps &
@@ -93,5 +93,5 @@ type ContainerProps = { store?: RootStore } & InjectedIntlProps &
     | 'dimensions'
     | 'isEmulator'
     | 'isPoweredByDisplayed'
-    | 'rtl'
+    | 'isRTL'
   >

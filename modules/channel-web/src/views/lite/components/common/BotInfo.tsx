@@ -47,7 +47,7 @@ class BotInfoPage extends React.Component<BotInfoProps> {
     return (
       <div
         className={classnames('bpw-botinfo-container', {
-          'bpw-rtl': this.props.rtl
+          'bpw-rtl': this.props.isRTL
         })}
       >
         <CoverPicture botInfo={botInfo} />
@@ -145,7 +145,7 @@ export default inject(({ store }: { store: RootStore }) => ({
   updatePreferredLanguage: store.updatePreferredLanguage,
   preferredLanguage: store.preferredLanguage,
   escapeHTML: store.escapeHTML,
-  rtl: store.rtl
+  isRTL: store.isRTL
 }))(injectIntl(observer(BotInfoPage)))
 
 type BotInfoProps = InjectedIntlProps &
@@ -161,5 +161,5 @@ type BotInfoProps = InjectedIntlProps &
     | 'updatePreferredLanguage'
     | 'preferredLanguage'
     | 'escapeHTML'
-    | 'rtl'
+    | 'isRTL'
   >

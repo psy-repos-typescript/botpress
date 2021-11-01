@@ -29,7 +29,7 @@ export default class BpSocket {
     this.events.on('guest.webchat.message', this.onMessage)
     this.events.on('guest.webchat.typing', this.onTyping)
     this.events.on('guest.webchat.data', this.onData)
-
+    this.events.on('guest.webchat.data', d => console.log('data', d))
     // firehose events to parent page
     this.events.onAny(this.postToParent)
   }

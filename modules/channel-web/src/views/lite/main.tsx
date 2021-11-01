@@ -262,6 +262,7 @@ class Web extends React.Component<MainProps> {
   }
 
   handleDataMessage = (event: Message) => {
+    console.log(event)
     if (!event || !event.payload) {
       return
     }
