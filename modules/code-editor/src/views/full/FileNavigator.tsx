@@ -13,7 +13,7 @@ import {
 import { lang } from 'botpress/shared'
 import { observe } from 'mobx'
 import { inject, observer } from 'mobx-react'
-import React from 'react'
+import React, { MouseEvent } from 'react'
 import ReactDOM from 'react-dom'
 
 import { EditableFile } from '../../backend/typings'
@@ -28,7 +28,8 @@ import { buildTree, EXAMPLE_FOLDER_LABEL, FOLDER_EXAMPLE, FOLDER_ICON } from './
 class FileNavigator extends React.Component<Props, State> {
   state = {
     files: undefined,
-    nodes: []
+    nodes: [],
+    selectedFiles: []
   }
 
   treeRef: React.RefObject<Tree<NodeData>>
@@ -49,7 +50,7 @@ class FileNavigator extends React.Component<Props, State> {
     if (this.props.selectedNode !== prevProps.selectedNode) {
       const { nodes } = this.state
       const selectedNode = this.props.selectedNode.replace(`${this.props.id}/`, '')
-      this.traverseTree(nodes, n => (n.isSelected = selectedNode === n.id))
+      this.traverseTree(nodes, (n) => (n.isSelected = selectedNode === n.id))
       this.setState({ nodes })
     }
   }
@@ -85,7 +86,7 @@ class FileNavigator extends React.Component<Props, State> {
     )
 
     const filter = this.props.filters && this.props.filters.filename.toLowerCase()
-    const nodes: ITreeNode[] = this.props.files.map(dir => ({
+    const nodes: ITreeNode[] = this.props.files.map((dir) => ({
       id: dir.label,
       label: dir.label === EXAMPLE_FOLDER_LABEL ? exampleLabel : dir.label,
       icon: dir.label === EXAMPLE_FOLDER_LABEL ? FOLDER_EXAMPLE : FOLDER_ICON,
@@ -95,25 +96,53 @@ class FileNavigator extends React.Component<Props, State> {
     }))
 
     // Examples are hidden by default so the view is not cluttered
-    this.traverseTree(nodes, n => n.id === EXAMPLE_FOLDER_LABEL && (n.isExpanded = false))
+    this.traverseTree(nodes, (n) => n.id === EXAMPLE_FOLDER_LABEL && (n.isExpanded = false))
 
     if (filter) {
-      this.traverseTree(nodes, n => (n.isExpanded = true))
+      this.traverseTree(nodes, (n) => (n.isExpanded = true))
     }
 
     this.setState({ nodes })
   }
 
-  private handleNodeClick = async (node: ITreeNode) => {
-    this.traverseTree(this.state.nodes, n => (n.isSelected = n.id === node.id))
+  private handleNodeClick = async (node: ITreeNode, nodePath: number[], event: MouseEvent<HTMLElement>) => {
+    this.traverseTree(this.state.nodes, (n) => (n.isSelected = n.id === node.id))
 
     // If nodeData is set, it's a file, otherwise a folder
     if (node.nodeData) {
-      await this.props.editor.openFile(node.nodeData as EditableFile)
+      // If the ctrl key was down, we're selecting multiple files for a batch operation.
+      const isBatch = !!event.ctrlKey
+      this.selectFile(node, isBatch)
+
+      // If we're only selecting one file, open it.
+      if (!isBatch) {
+        await this.handleOpenFile(node)
+      }
     } else {
       this.handleNodeExpand(node, !node.isExpanded)
     }
     this.props.onNodeStateSelected(this.props.id + '/' + node.id)
+  }
+
+  private handleOpenFile(node: ITreeNode) {
+    this.props.editor.openFile(node.nodeData as EditableFile)
+    // Reset selected files to only the currently open file.
+    this.setState((state) => {
+      return { ...state, selectedFiles: [] }
+    })
+  }
+
+  private selectFile(node: ITreeNode, isBatch: boolean) {
+    const file = node.nodeData as EditableFile
+
+    this.setState((state) => {
+      if (isBatch) {
+        return { ...state, selectedFiles: [...state.selectedFiles, file.name] }
+      }
+
+      // If we're only selecting one file, reset selectedFiles to the current file only.
+      return { ...state, selectedFiles: [file.name] }
+    })
   }
 
   private handleNodeExpand = (node: ITreeNode, isExpanded: boolean) => {
@@ -301,8 +330,8 @@ class FileNavigator extends React.Component<Props, State> {
         contents={this.state.nodes}
         onNodeContextMenu={this.handleContextMenu}
         onNodeClick={this.handleNodeClick}
-        onNodeCollapse={n => this.handleNodeExpand(n, false)}
-        onNodeExpand={n => this.handleNodeExpand(n, true)}
+        onNodeCollapse={(n) => this.handleNodeExpand(n, false)}
+        onNodeExpand={(n) => this.handleNodeExpand(n, true)}
         className={Classes.ELEVATION_0}
       />
     )
@@ -336,6 +365,7 @@ type Props = {
 
 interface State {
   nodes: ITreeNode[]
+  selectedFiles: string[]
 }
 
 interface NodeData {
