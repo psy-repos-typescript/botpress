@@ -251,9 +251,9 @@ class CreateBotModal extends Component<Props, State> {
               >
                 <InputGroup
                   id="cloud-client-id"
-                  placeholder={lang.tr('admin.workspace.bots.create.clientKeyPlaceholder')}
+                  placeholder={lang.tr('admin.workspace.bots.create.clientIdPlaceholder')}
                   value={this.state.cloudClientId}
-                  className={style.clientKey}
+                  className={style.clientId}
                   onChange={e =>
                     this.setState({
                       cloudClientId: e.target.value

@@ -19,7 +19,6 @@ describe('Admin - Bot Management', () => {
   const tempBotId = 'lol-bot'
   const importBotId = 'import-bot'
   const workspaceId = 'default'
-  const apiKey = '1234567890'
 
   const clickButtonForBot = async (buttonId: string, botId: string) => {
     const botRow = await expectMatchElement('.bp_table-row', { text: botId })
@@ -72,8 +71,11 @@ describe('Admin - Bot Management', () => {
     await fillField('#select-bot-templates', 'Welcome Bot') // Using fill instead of select because options are created dynamically
     await page.keyboard.press('Enter')
 
+    // Test cloud bot interface
     await clickOn('#checkbox-bot-cloud')
-    await fillField('#bot-api-key', apiKey)
+    await fillField('#cloud-client-id', 'abc')
+    await fillField('#cloud-client-secret', '123')
+    await clickOn('#checkbox-bot-cloud')
 
     await Promise.all([expectAdminApiCallSuccess('workspace/bots', 'POST'), clickOn('#btn-modal-create-bot')])
   })

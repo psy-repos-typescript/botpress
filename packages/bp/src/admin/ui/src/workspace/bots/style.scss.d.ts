@@ -6,7 +6,7 @@ interface CssExports {
   'bot_views': string;
   'botbadge': string;
   'bottomRow': string;
-  'clientKey': string;
+  'clientId': string;
   'compact_view': string;
   'create': string;
   'createbot_btn': string;
