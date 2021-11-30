@@ -132,7 +132,7 @@ class CreateBotModal extends Component<Props, State> {
       newBot.cloud = {
         clientId: this.state.cloudClientId,
         clientSecret: this.state.cloudClientSecret,
-        oauthUrl: ''
+        oauthUrl: 'https://oauth.botpress.dev/oauth2/token'
       }
     }
 
