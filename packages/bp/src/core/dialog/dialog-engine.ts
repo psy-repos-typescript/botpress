@@ -253,7 +253,7 @@ export class DialogEngine {
       nextFlow,
       nextNode
     }: {
-      currentFlow: FlowWithParent
+      currentFlow?: FlowWithParent
       currentNode?: FlowNode
       nextFlow: FlowWithParent
       nextNode: FlowNode
@@ -264,13 +264,16 @@ export class DialogEngine {
       currentNode: nextNode.name,
       currentFlow: nextFlow.name,
       queue: undefined,
-      previousFlow: currentFlow.name,
+      previousFlow: currentFlow?.name ?? '',
       previousNode: currentNode?.name ?? '',
-      hasJumped: true,
-      jumpPoints: [
+      hasJumped: true
+    }
+
+    if (currentFlow) {
+      event.state.context.jumpPoints = [
         ...(event.state.context?.jumpPoints || []),
         {
-          flow: currentFlow.name,
+          flow: currentFlow?.name,
           node: currentNode?.name as string
         }
       ]
@@ -285,7 +288,7 @@ export class DialogEngine {
 
     await this._loadFlows(botId)
 
-    const currentFlow = this._findFlow(botId, event.state.context?.currentFlow)
+    const currentFlow = this.findFlowWithoutError(botId, event.state.context?.currentFlow)
     const currentNode = this.findNodeWithoutError(botId, currentFlow, event.state.context?.currentNode)
 
     // Check for a timeout property in the current node
@@ -295,6 +298,11 @@ export class DialogEngine {
     // Check for a timeout node in the current flow
     if (!timeoutNode) {
       timeoutNode = this.findNodeWithoutError(botId, currentFlow, 'timeout')
+      if (!timeoutNode && currentFlow?.name.startsWith('skills/') && event.state.context?.previousFlow) {
+        const previousFlow = this.findFlowWithoutError(botId, event.state.context?.previousFlow)
+        timeoutNode = this.findNodeWithoutError(botId, previousFlow, 'timeout')
+        timeoutFlow = previousFlow
+      }
     }
 
     // Check for a timeout property in the current flow
@@ -314,12 +322,15 @@ export class DialogEngine {
       }
     }
 
-    if (!timeoutNode || !timeoutFlow) {
-      throw new TimeoutNodeNotFound(`Could not find any timeout node or flow for session "${sessionId}"`)
+    if (timeoutNode && timeoutFlow) {
+      // There is a timeout node and flow, we jump to it
+      this.fillContextForTransition(event, { currentFlow, currentNode, nextFlow: timeoutFlow, nextNode: timeoutNode })
+    } else if (!event.state.context?.hasJumped) {
+      // If there was no jump, we just return the event to have it's state changes persisted
+      return event
     }
 
-    this.fillContextForTransition(event, { currentFlow, currentNode, nextFlow: timeoutFlow, nextNode: timeoutNode })
-
+    // Process the event with the new context, return to persist state changes
     return this.processEvent(sessionId, event)
   }
 
@@ -411,7 +422,7 @@ export class DialogEngine {
 
   protected async _transition(sessionId: string, event: IO.IncomingEvent, transitionTo: string) {
     let context: IO.DialogContext = event.state.context || {}
-    this._detectInfiniteLoop(event.state.__stacktrace, event.botId)
+    this.detectInfiniteLoop(event.state.__stacktrace, event.botId)
 
     context.jumpPoints = context.jumpPoints?.filter(x => !x.used)
 
@@ -553,7 +564,7 @@ export class DialogEngine {
     this._flowsByBot.set(botId, flows)
   }
 
-  private _detectInfiniteLoop(stacktrace: IO.JumpPoint[], botId: string) {
+  public detectInfiniteLoop(stacktrace: IO.JumpPoint[], botId: string) {
     // find the first node that gets repeated at least 3 times
     const loop = _.chain(stacktrace)
       .groupBy(x => `${x.flow}|${x.node}`)

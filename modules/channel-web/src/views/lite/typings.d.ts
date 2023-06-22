@@ -142,6 +142,7 @@ export namespace Renderer {
     title: string
     subtitle: string
     buttons: CardButton[]
+    markdown: boolean
   }
 
   export interface CardButton {
@@ -233,7 +234,7 @@ export interface Config {
   viewMode?: 'Embedded' | 'Fullscreen'
 }
 
-type OverridableComponents = 'below_conversation' | 'before_container' | 'composer'
+type OverridableComponents = 'below_conversation' | 'before_container' | 'composer' | 'before_widget'
 
 interface Overrides {
   [componentToOverride: string]: [

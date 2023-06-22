@@ -3,7 +3,7 @@ id: hitlnext
 title: HITL Next
 ---
 
---------------------
+---
 
 :::caution
 This module is **not** compatible with the Converse API
@@ -11,7 +11,7 @@ This module is **not** compatible with the Converse API
 
 This revamped HITL works on **all existing and future channels (except the Converse API)**. It supports all features of its predecessor and a few more :
 
-- Multi-agents ( _enterprise edition only_ )
+- Single-agent one login only
 - Human handoff from any workflow
 - Real-time agent interface
 - Agent notes
@@ -27,14 +27,10 @@ However, unlike its predecessor, this module only allows you to view conversatio
 
 This module uses the `channel-web` to display conversations, so make sure it's enabled.
 
-:::info
-A multi-agent setup needs an enterprise license.
-:::
-
 ## Setup
 
 Turn on HITL-next on the module management page of your Botpress Admin.
-![Enable Module](/assets/enable-module.png)
+![Enable Module](https://user-images.githubusercontent.com/104075132/224081700-d507c3fb-ffad-49ff-a078-b783f954115c.png)
 
 You can also enable the module directly in your `botpress.config.json` file as shown [here](/enterprise/user-management-and-security/role-based-access-control/collaborators).
 
@@ -48,28 +44,15 @@ The Studio interface has three main sections:
 
 ![Agent Interface](/assets/agent-interface.png)
 
-## Adding Agents
-
-Revamped HITL allows multiple agents to collaborate on the platform. As a Botpress workspace administrator, you can invite agents the same way you would invite administrators or developers to your workspace. 
-
-1. In your Botpress Admin, click the **Collaborators** tab.
-1. Click **Add Collaborator**.
-  1. Fill in your agent email.
-  1. Choose an **Authentication Strategy** in the dropdown menu, if needed.
-  1. Select **Agent** as their role.
-1. Click **Create Account** or **Add to Workspace**. 
-
-![Collaborators](/assets/collaborators.png)
-![Agent Collaborator](/assets/agent-collaborator.png)
-
 ## Agent Profile
 
 For an agent's name and avatar to display to users, they can configure their profile as follows:
+
 1. In the Admin, click the avatar icon at the top right corner.
 1. Select the **Update Profile** option. Then, fill in the boxes:
-  1. **First Name**
-  1. **Last Name**
-  1. **Profile Picture**.
+1. **First Name**
+1. **Last Name**
+1. **Profile Picture**.
 
 ![Agent profile](/assets/agent-profile.png)
 
@@ -85,7 +68,7 @@ Every time that node is triggered, the **Handoffs** section shows a new pending 
 
 ### Handoff Assignation and Resolution
 
-To pick a handoff and start conversing with the end-user, an agent first needs to set theirselves *Oonline** at the top right corner of the Agent Interface. This simple feature allows agents or coordinators to oversee conversations while offline. It is also handy when your team implements any auto-assignation rule.
+To pick a handoff and start conversing with the end-user, an agent first needs to set themselves \*Online\*\* at the top right corner of the Agent Interface. This simple feature allows agents or coordinators to oversee conversations while offline. It is also handy when your team implements any auto-assignation rule.
 
 ![Online](/assets/online.gif)
 
@@ -115,7 +98,7 @@ A simple but powerful tool for collaboration over time, notes are associated wit
 
 ## Advanced Features and Customization
 
-Here are the most commonly used module configurations. You can check out the [module configuration file](https://github.com/botpress/botpress/blob/master/modules/hitlnext/src/config.ts) for all options.
+Here are the most commonly used module configurations. You can check out the [module configuration file](https://github.com/botpress/v12/blob/master/modules/hitlnext/src/config.ts) for all options.
 
 To set any of those configurations, you'll first need to open up the `hitlnext.json` in the **Code Editor** section of your Conversation Studio.
 
@@ -165,7 +148,7 @@ The same technique applies to **Assignation Message**. Note that you can optionn
 
 ### Message Templates
 
-If your team of agents often uses the same set of answers, the `autoComplete` configuration can store pre-written messages. They are a handy shortcut for agents, and you can add as many as you want. 
+If your team of agents often uses the same set of answers, the `autoComplete` configuration can store pre-written messages. They are a handy shortcut for agents, and you can add as many as you want.
 
 Here is how they show up in the Agent Interface:
 
@@ -195,12 +178,12 @@ Before adding a message template, choose a `trigger` character that will open up
 
 ### Handoff Labels
 
-Handoff labels are useful for agents to categorize handoffs before resolution so that in future handoffs, agents can quickly understand the last conversation with an agent. Labels are also useful when analyzing resolved handoffs, either for quality assurance or for reporting. 
+Handoff labels are useful for agents to categorize handoffs before resolution so that in future handoffs, agents can quickly understand the last conversation with an agent. Labels are also useful when analyzing resolved handoffs, either for quality assurance or for reporting.
 
 ![Labels](/assets/labels.png)
 
 :::info
-You can add as many as you want, but a good practice is to start with a small number of labels and add new ones when necessary. 
+You can add as many as you want, but a good practice is to start with a small number of labels and add new ones when necessary.
 :::
 
 **Example:**
